@@ -216,4 +216,57 @@ class BackdataController{
     foreach($rows as $r){ fputcsv($out, [$r['id'],$r['full_name'],$r['phone'],$r['email'],$r['source_name'],$r['status'],$r['created_at']]); }
     fclose($out); exit;
   }
+
+  // Sellers productivity overview
+  public function sellers(){ $this->requireBD();
+    $db = db();
+    $from = $_GET['from'] ?? date('Y-m-d', strtotime('-7 days'));
+    $to = $_GET['to'] ?? date('Y-m-d');
+    $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+    // Sellers list with metrics
+    $params = [$from.' 00:00:00', $to.' 23:59:59', $from.' 00:00:00', $to.' 23:59:59'];
+    $batchWhereAssign = '';
+    $batchWhereBases = '';
+    if($batchId){ $batchWhereAssign = ' AND EXISTS(SELECT 1 FROM leads l2 WHERE l2.id=la.lead_id AND l2.batch_id='.((int)$batchId).')';
+                  $batchWhereBases = ' AND l3.batch_id='.((int)$batchId); }
+    $sql = "SELECT u.id,u.name,u.username,
+              (SELECT COUNT(*) FROM lead_assignments la WHERE la.seller_id=u.id AND la.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS assigned,
+              (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.user_id=u.id AND a.created_at BETWEEN ? AND ?) AS tipified,
+              (SELECT COUNT(DISTINCT l3.batch_id) FROM lead_assignments la3 JOIN leads l3 ON l3.id=la3.lead_id WHERE la3.seller_id=u.id AND la3.assigned_at BETWEEN ? AND ? $batchWhereBases) AS bases
+            FROM users u
+            WHERE u.active=1 AND u.role_id=(SELECT id FROM roles WHERE name='seller' LIMIT 1)
+            ORDER BY u.name";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$from.' 00:00:00',$to.' 23:59:59',$from.' 00:00:00',$to.' 23:59:59',$from.' 00:00:00',$to.' 23:59:59']);
+    $sellers = $stmt->fetchAll();
+    $batches = $db->query("SELECT id,name FROM import_batches ORDER BY id DESC LIMIT 200")->fetchAll();
+    view('backdata/sellers', ['sellers'=>$sellers,'from'=>$from,'to'=>$to,'batch_id'=>$batchId,'batches'=>$batches]);
+  }
+
+  public function sellerPreview(){ $this->requireBD();
+    $db = db();
+    $sid = (int)($_GET['seller_id'] ?? 0); if(!$sid){ http_response_code(400); exit('Falta seller_id'); }
+    $from = $_GET['from'] ?? date('Y-m-d', strtotime('-7 days'));
+    $to = $_GET['to'] ?? date('Y-m-d');
+    $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
+    $status = trim($_GET['status'] ?? '');
+    $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+    $where = 'la.seller_id=? AND la.assigned_at BETWEEN ? AND ?';
+    $params = [$sid, $from.' 00:00:00', $to.' 23:59:59'];
+    if($batchId){ $where .= ' AND l.batch_id=?'; $params[] = $batchId; }
+    $sql = "SELECT l.id,l.full_name,l.phone,l.email, l.source_name, b.name AS base_name, la.assigned_at,
+              (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
+              (SELECT u2.name FROM lead_activities a2 JOIN users u2 ON u2.id=a2.user_id WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_by,
+              (SELECT a3.created_at FROM lead_activities a3 WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_at
+            FROM lead_assignments la
+            JOIN leads l ON l.id=la.lead_id
+            LEFT JOIN import_batches b ON b.id=l.batch_id
+            WHERE $where
+            ORDER BY la.id DESC LIMIT $limit";
+    $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
+    if($status!==''){ $rows = array_values(array_filter($rows, fn($r)=> (string)($r['last_status']??'') === $status)); }
+    // Available statuses for filter (top 10)
+    $sts = $db->query("SELECT DISTINCT status FROM lead_activities ORDER BY status LIMIT 50")->fetchAll(PDO::FETCH_COLUMN);
+    view('backdata/seller_preview', ['rows'=>$rows,'limit'=>$limit,'from'=>$from,'to'=>$to,'seller_id'=>$sid,'status'=>$status,'statuses'=>$sts,'batch_id'=>$batchId]);
+  }
 }

@@ -31,6 +31,8 @@ $r->get('/backdata/summary',[App\Controllers\BackdataController::class,'summary'
 $r->get('/backdata/leads',[App\Controllers\BackdataController::class,'leads']);
 $r->get('/backdata/leads/day-preview',[App\Controllers\BackdataController::class,'leadsDayPreview']);
 $r->get('/backdata/leads/export',[App\Controllers\BackdataController::class,'leadsExport']);
+$r->get('/backdata/sellers',[App\Controllers\BackdataController::class,'sellers']);
+$r->get('/backdata/seller/preview',[App\Controllers\BackdataController::class,'sellerPreview']);
 $r->get('/backdata/bases',[App\Controllers\BackdataController::class,'bases']);
 $r->get('/backdata/base',[App\Controllers\BackdataController::class,'baseDetail']);
 $r->get('/backdata/base/preview',[App\Controllers\BackdataController::class,'basePreview']);

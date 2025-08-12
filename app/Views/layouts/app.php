@@ -36,6 +36,7 @@
             <div class="list-group-item fw-bold text-uppercase small">Backdata</div>
             <a class="list-group-item list-group-item-action" href="/backdata/summary">Resumen</a>
             <a class="list-group-item list-group-item-action" href="/backdata/bases">Bases</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/sellers">Productividad</a>
             <a class="list-group-item list-group-item-action" href="/backdata/leads">Leads</a>
             <a class="list-group-item list-group-item-action" href="/backdata/assign">Asignar</a>
             <a class="list-group-item list-group-item-action" href="/backdata/import">Importar</a>
@@ -43,6 +44,7 @@
             <div class="list-group-item fw-bold text-uppercase small">Backdata</div>
             <a class="list-group-item list-group-item-action" href="/backdata/summary">Resumen</a>
             <a class="list-group-item list-group-item-action" href="/backdata/bases">Bases</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/sellers">Productividad</a>
             <a class="list-group-item list-group-item-action" href="/backdata/leads">Leads</a>
             <a class="list-group-item list-group-item-action" href="/backdata/assign">Asignar</a>
             <a class="list-group-item list-group-item-action" href="/backdata/import">Importar</a>
