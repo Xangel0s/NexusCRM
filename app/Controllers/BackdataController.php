@@ -63,15 +63,24 @@ class BackdataController{
 
   // (Legacy placeholder) Day preview route was referenced; implement simple JSON/HTML response of leads for a given day
   public function leadsDayPreview(){ $this->requireBD();
-    $day = $_GET['day'] ?? date('Y-m-d');
+    // Params unify: accept 'date' (from view) and fallback to 'day'
+    $day = $_GET['date'] ?? $_GET['day'] ?? date('Y-m-d');
+    $status = trim($_GET['status'] ?? '');
+    $assignedFilter = $_GET['assigned'] ?? '';
+    $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
     $db = db();
-    $stmt = $db->prepare("SELECT l.id,l.full_name,l.phone,l.email,l.status,l.created_at,
+    $where = 'DATE(l.created_at)=?';
+    $params = [$day];
+    if($status !== ''){ $where .= ' AND l.status=?'; $params[] = $status; }
+    if($assignedFilter==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la2 WHERE la2.lead_id=l.id)'; }
+    if($assignedFilter==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la2 WHERE la2.lead_id=l.id)'; }
+    if($assignedFilter==='t1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a2 WHERE a2.lead_id=l.id)'; }
+    if($assignedFilter==='t0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a2 WHERE a2.lead_id=l.id)'; }
+    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.status,l.created_at,
         (SELECT la.assigned_at FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS assigned_at,
         (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name
-      FROM leads l WHERE DATE(l.created_at)=? ORDER BY l.id DESC LIMIT 200");
-    $stmt->execute([$day]);
-    $rows = $stmt->fetchAll();
-    // Simple lightweight viewless output (could be replaced by dedicated view) for now
+      FROM leads l WHERE $where ORDER BY l.id DESC LIMIT $limit";
+    $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
     if(isset($_GET['format']) && $_GET['format']==='json'){
       header('Content-Type: application/json'); echo json_encode(['day'=>$day,'rows'=>$rows]); return; }
     echo '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Status</th><th>Asignado a</th><th>Creado</th><th>Asignado</th></tr></thead><tbody>';
@@ -102,6 +111,34 @@ class BackdataController{
   view('backdata/bases', ['batches'=>$batches,'q'=>$q,'showArchived'=>$showArchived,'noResults'=>$noResults]);
   }
 
+  // Nuevo módulo: Progreso de tipificación por base (similar a bases, pero centrado en avance y pendiente)
+  public function basesProgress(){ $this->requireBD();
+    $db = db();
+  $q = trim($_GET['q'] ?? '');
+  // Nuevo filtro de estado: all | active | archived (compatibilidad con checkbox anterior ?archived=1)
+  $state = isset($_GET['state']) ? $_GET['state'] : (isset($_GET['archived']) && $_GET['archived']=='1' ? 'archived' : 'all');
+    if(!in_array($state,['all','active','archived'])) $state='all';
+    $where = '1=1';
+    if($state==='active') $where .= ' AND b.archived_at IS NULL';
+    if($state==='archived') $where .= ' AND b.archived_at IS NOT NULL';
+    $params = [];
+    if($q!==''){ $where .= ' AND (b.name LIKE ? OR b.tags LIKE ?)'; $params[]='%'.$q.'%'; $params[]='%'.$q.'%'; }
+    $sql = "SELECT b.id,b.name,b.tags,b.created_at,b.archived_at,
+              (SELECT COUNT(*) FROM leads l WHERE l.batch_id=b.id) AS total_leads,
+              (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=b.id)) AS tipified
+            FROM import_batches b
+            WHERE $where
+            ORDER BY b.id DESC LIMIT 200";
+    $stmt=$db->prepare($sql); $stmt->execute($params); $rows=$stmt->fetchAll();
+    foreach($rows as &$r){
+      $r['pending'] = max(0, (int)$r['total_leads'] - (int)$r['tipified']);
+      $r['progress_pct'] = $r['total_leads']>0 ? round(($r['tipified']/$r['total_leads'])*100,1) : 0;
+      $r['status_label'] = $r['progress_pct']>=100 ? 'Completada' : ($r['archived_at']? 'Archivada' : 'En curso');
+    }
+    $noResults = (empty($rows) && $q!=='');
+    view('backdata/bases_progress',[ 'rows'=>$rows,'q'=>$q,'state'=>$state,'noResults'=>$noResults ]);
+  }
+
   public function baseDetail(){ $this->requireBD();
     $id = (int)($_GET['id'] ?? 0); if(!$id){ http_response_code(404); exit('Base no encontrada'); }
     $db = db();
@@ -115,7 +152,11 @@ class BackdataController{
     if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
     $sql = "SELECT l.*,
               (SELECT la.seller_id FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_id,
-              (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name
+              (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name,
+              (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
+              (SELECT a2.created_at FROM lead_activities a2 WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_status_at,
+              (SELECT u2.name FROM lead_activities a3 JOIN users u2 ON u2.id=a3.user_id WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_status_by,
+              (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
             FROM leads l WHERE $where ORDER BY l.id DESC LIMIT 500";
     $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
     view('backdata/base_detail', ['batch'=>$batch,'leads'=>$leads,'q'=>$q,'assigned'=>$assigned]);
@@ -148,12 +189,22 @@ class BackdataController{
   public function baseExport(){ $this->requireBD();
     $id = (int)($_GET['id'] ?? 0); if(!$id){ http_response_code(400); exit('Falta id'); }
     $db = db();
-    $rows = $db->query("SELECT id, full_name, phone, email, source_name, created_at FROM leads WHERE batch_id=".(int)$id." ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
+              (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
+              (SELECT a.created_at FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_at,
+              (SELECT u.name FROM lead_activities a JOIN users u ON u.id=a.user_id WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_by,
+              (SELECT a.note FROM lead_activities a WHERE a.lead_id=l.id AND a.note IS NOT NULL AND a.note<>'' ORDER BY a.id DESC LIMIT 1) AS last_note
+            FROM leads l WHERE l.batch_id=? ORDER BY l.id ASC";
+    $stmt=$db->prepare($sql); $stmt->execute([$id]); $rows=$stmt->fetchAll(PDO::FETCH_ASSOC);
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="base_'.$id.'.csv"');
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['id','full_name','phone','email','source','created_at']);
-    foreach($rows as $r){ fputcsv($out, [$r['id'],$r['full_name'],$r['phone'],$r['email'],$r['source_name'],$r['created_at']]); }
+  header('Content-Disposition: attachment; filename="base_'.$id.'_export.csv"');
+    $out=fopen('php://output','w');
+    fputcsv($out,['id','full_name','phone','email','source','created_at','last_status','last_status_at','last_status_by','last_note']);
+    foreach($rows as $r){
+      fputcsv($out,[
+        $r['id'],$r['full_name'],$r['phone'],$r['email'],$r['source_name'],$r['created_at'],$r['last_status'],$r['last_status_at'],$r['last_status_by'],$r['last_note']
+      ]);
+    }
     fclose($out); exit;
   }
 

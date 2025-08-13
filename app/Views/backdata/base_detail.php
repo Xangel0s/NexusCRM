@@ -26,7 +26,8 @@
         <button class="btn btn-outline-success" type="submit">Desarchivar</button>
       </form>
     <?php endif; ?>
-    <a href="/backdata/bases" class="btn btn-secondary">Volver</a>
+  <a href="/backdata/base/export?id=<?= (int)$batch['id'] ?>" class="btn btn-outline-secondary" title="Exportar CSV" target="_blank">Exportar CSV</a>
+  <a href="/backdata/bases" class="btn btn-secondary">Volver</a>
   </div>
   
 </div>
@@ -58,11 +59,11 @@
     <div class="table-responsive">
       <table class="table table-striped table-hover mb-0">
         <thead><tr>
-          <th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Creado</th><th>Asignado a</th>
+          <th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Creado</th><th>Asignado a</th><th>Status</th><th>Tipificado por</th><th>Fecha status</th><th>Nota</th>
         </tr></thead>
         <tbody>
           <?php if(empty($leads)): ?>
-            <tr><td colspan="7" class="text-center text-muted">Sin resultados</td></tr>
+            <tr><td colspan="11" class="text-center text-muted">Sin resultados</td></tr>
           <?php else: foreach($leads as $l): ?>
             <tr>
               <td>#<?= (int)$l['id'] ?></td>
@@ -77,6 +78,10 @@
                 <?php else: ?>-
                 <?php endif; ?>
               </td>
+              <td><?= htmlspecialchars($l['last_status'] ?? '-') ?></td>
+              <td><?= htmlspecialchars($l['last_status_by'] ?? '-') ?></td>
+              <td><?= htmlspecialchars($l['last_status_at'] ?? '-') ?></td>
+              <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($l['last_note'] ?? '-') ?>"><?= htmlspecialchars($l['last_note'] ?? '-') ?></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>
