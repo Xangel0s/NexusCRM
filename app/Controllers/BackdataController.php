@@ -146,10 +146,15 @@ class BackdataController{
     $base->execute([$id]); $batch = $base->fetch(); if(!$batch){ http_response_code(404); exit('Base no encontrada'); }
     $q = trim($_GET['q'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
+  $typed = $_GET['typed'] ?? '';
+  $statusFilter = trim($_GET['status'] ?? '');
     $where = 'l.batch_id=?'; $params = [$id];
   if($q!==''){ $where .= ' AND (l.phone LIKE ? OR l.full_name LIKE ? OR l.email LIKE ?)'; array_push($params,'%'.$q.'%','%'.$q.'%','%'.$q.'%'); }
     if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
     if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
+  if($typed==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
+  if($typed==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
+  if($statusFilter!==''){ $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$statusFilter; }
     $sql = "SELECT l.*,
               (SELECT la.seller_id FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_id,
               (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name,
@@ -158,8 +163,8 @@ class BackdataController{
               (SELECT u2.name FROM lead_activities a3 JOIN users u2 ON u2.id=a3.user_id WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_status_by,
               (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
             FROM leads l WHERE $where ORDER BY l.id DESC LIMIT 500";
-    $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
-    view('backdata/base_detail', ['batch'=>$batch,'leads'=>$leads,'q'=>$q,'assigned'=>$assigned]);
+  $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
+  view('backdata/base_detail', ['batch'=>$batch,'leads'=>$leads,'q'=>$q,'assigned'=>$assigned,'typed'=>$typed,'statusFilter'=>$statusFilter]);
   }
 
   public function baseArchive(){ $this->requireBD(); csrf_check(); $id=(int)($_POST['id']??0); if(!$id){ header('Location: /backdata/bases'); return; }
@@ -281,24 +286,39 @@ class BackdataController{
       $q = trim($_GET['q'] ?? '');
 
       $sql = "SELECT u.id,u.name,u.username,
-                (SELECT COUNT(*) FROM lead_assignments la WHERE la.seller_id=u.id AND la.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS assigned,
-                (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.user_id=u.id AND a.created_at BETWEEN ? AND ?) AS tipified,
-                (SELECT COUNT(DISTINCT l3.batch_id) FROM lead_assignments la3 JOIN leads l3 ON l3.id=la3.lead_id WHERE la3.seller_id=u.id AND la3.assigned_at BETWEEN ? AND ? $batchWhereBases) AS bases,
+                (SELECT COUNT(*) FROM lead_assignments la WHERE la.seller_id=u.id AND la.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS assigned_period,
+                (SELECT COUNT(DISTINCT a.lead_id)
+                   FROM lead_assignments laX
+                   JOIN lead_activities a ON a.lead_id=laX.lead_id
+                   WHERE laX.seller_id=u.id AND laX.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS tipified_period,
+                (SELECT COUNT(DISTINCT l3.batch_id) FROM lead_assignments la3 JOIN leads l3 ON l3.id=la3.lead_id WHERE la3.seller_id=u.id AND la3.assigned_at BETWEEN ? AND ? $batchWhereBases) AS bases_period,
                 (SELECT COUNT(*) FROM lead_assignments laT WHERE laT.seller_id=u.id) AS assigned_total,
                 (SELECT COUNT(DISTINCT aT.lead_id) FROM lead_activities aT WHERE aT.user_id=u.id) AS tipified_total,
                 (SELECT COUNT(DISTINCT lAll.batch_id) FROM lead_assignments laAll JOIN leads lAll ON lAll.id=laAll.lead_id WHERE laAll.seller_id=u.id) AS bases_total,
-                (SELECT GROUP_CONCAT(DISTINCT b2.name ORDER BY b2.id SEPARATOR ', ')
-                   FROM lead_assignments la2
-                   JOIN leads l2 ON l2.id=la2.lead_id
-                   LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
+                -- Inventario actual (última asignación vigente)
+                (SELECT COUNT(*) FROM leads lC WHERE EXISTS(
+                    SELECT 1 FROM lead_assignments laC
+                    WHERE laC.lead_id=lC.id AND laC.id=(SELECT MAX(laC2.id) FROM lead_assignments laC2 WHERE laC2.lead_id=lC.id)
+                      AND laC.seller_id=u.id
+                )) AS current_assigned,
+                (SELECT COUNT(DISTINCT aC.lead_id) FROM lead_activities aC
+                   WHERE EXISTS(
+                     SELECT 1 FROM lead_assignments laCL
+                     WHERE laCL.lead_id=aC.lead_id AND laCL.id=(SELECT MAX(laCL2.id) FROM lead_assignments laCL2 WHERE laCL2.lead_id=aC.lead_id)
+                       AND laCL.seller_id=u.id
+                   )) AS current_tipified,
+           (SELECT GROUP_CONCAT(DISTINCT b2.name ORDER BY b2.id SEPARATOR ', ')
+             FROM lead_assignments la2
+             JOIN leads l2 ON l2.id=la2.lead_id
+             LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
                    WHERE la2.seller_id=u.id AND la2.assigned_at BETWEEN ? AND ? $batchWhereList) AS base_names,
-                (SELECT GROUP_CONCAT(DISTINCT b2.tags ORDER BY b2.id SEPARATOR ', ')
-                   FROM lead_assignments la2
-                   JOIN leads l2 ON l2.id=la2.lead_id
-                   LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
+           (SELECT GROUP_CONCAT(DISTINCT b2.tags ORDER BY b2.id SEPARATOR ', ')
+             FROM lead_assignments la2
+             JOIN leads l2 ON l2.id=la2.lead_id
+             LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
                    WHERE la2.seller_id=u.id AND la2.assigned_at BETWEEN ? AND ? $batchWhereList) AS base_tags
-              FROM users u
-              WHERE u.active=1 AND u.role_id=(SELECT id FROM roles WHERE name='seller' LIMIT 1)";
+          FROM users u
+          WHERE u.active=1 AND u.role_id=(SELECT id FROM roles WHERE name='seller' LIMIT 1)";
       $params = [
         $from.' 00:00:00',$to.' 23:59:59', // assigned
         $from.' 00:00:00',$to.' 23:59:59', // tipified
@@ -316,6 +336,18 @@ class BackdataController{
       $sellers = $stmt->fetchAll();
       $batches = $db->query("SELECT id,name FROM import_batches ORDER BY id DESC LIMIT 200")->fetchAll();
       // Removed flash message (was repetitive). Pass count to view instead.
+      // Normalizar estructura para vista (retrocompatibilidad de nombres)
+      foreach($sellers as &$s){
+        $s['assigned'] = (int)$s['assigned_period'];
+        $s['tipified'] = (int)$s['tipified_period'];
+        $s['bases'] = (int)$s['bases_period'];
+        // Fallback a inventario actual si periodo es cero (evita mostrar 0% con totales >0)
+        if($s['assigned']==0 && $s['current_assigned']>0){
+          $s['assigned'] = (int)$s['current_assigned'];
+          $s['tipified'] = (int)$s['current_tipified'];
+          $s['__using_current'] = true;
+        }
+      }
       view('backdata/sellers', ['sellers'=>$sellers,'sellers_count'=>count($sellers),'from'=>$from,'to'=>$to,'batch_id'=>$batchId,'batches'=>$batches,'q'=>$q]);
     } catch(\Throwable $e){
       flash('error','Error: '.$e->getMessage());
