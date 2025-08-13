@@ -37,8 +37,9 @@
             <label class="form-label">Nota (opcional)</label>
             <textarea name="note" class="form-control form-control-sm" rows="3" maxlength="2000"></textarea>
           </div>
-          <div>
+          <div class="d-flex gap-2">
             <button class="btn btn-primary btn-sm">Guardar</button>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#releaseModal" data-lead="<?= (int)$lead['id'] ?>">Liberar</button>
           </div>
         </form>
       </div></div>
@@ -64,6 +65,28 @@
             <?php endforeach; endif; ?>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Liberar (detalle) -->
+<div class="modal fade" id="releaseModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Liberar lead</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Al liberar este lead ya no aparecerá en tu listado y no podrás recuperarlo. ¿Deseas continuar?</p>
+      </div>
+      <div class="modal-footer">
+        <form method="post" action="/seller/release" id="releaseFormDetail">
+          <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+          <input type="hidden" name="lead_id" value="<?= (int)$lead['id'] ?>">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-sm btn-danger">Sí, liberar</button>
+        </form>
       </div>
     </div>
   </div>

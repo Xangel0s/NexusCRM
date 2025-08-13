@@ -68,7 +68,7 @@ document.addEventListener('click', function(e){
   if(cont.style.display==='none'){
     cont.style.display='block';
     if(!cont.dataset.loaded){
-      fetch('/backdata/leads/day-preview?date='+encodeURIComponent(date)+'&limit=20&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>',{headers:{'X-Requested-With':'XMLHttpRequest'}})
+  fetch('/backdata/leads/day-preview?date='+encodeURIComponent(date)+'&limit=20&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>',{headers:{'X-Requested-With':'XMLHttpRequest'}})
         .then(r=>r.text()).then(html=>{ cont.innerHTML=html; cont.dataset.loaded='1'; attachDayLinks(cont, date); });
     }
   } else {

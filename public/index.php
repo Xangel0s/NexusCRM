@@ -34,6 +34,7 @@ $r->get('/backdata/leads/export',[App\Controllers\BackdataController::class,'lea
 $r->get('/backdata/sellers',[App\Controllers\BackdataController::class,'sellers']);
 $r->get('/backdata/seller/preview',[App\Controllers\BackdataController::class,'sellerPreview']);
 $r->get('/backdata/bases',[App\Controllers\BackdataController::class,'bases']);
+$r->get('/backdata/bases/progreso',[App\Controllers\BackdataController::class,'basesProgress']);
 $r->get('/backdata/base',[App\Controllers\BackdataController::class,'baseDetail']);
 $r->get('/backdata/base/preview',[App\Controllers\BackdataController::class,'basePreview']);
 $r->get('/backdata/base/export',[App\Controllers\BackdataController::class,'baseExport']);
@@ -52,6 +53,7 @@ $r->post('/backdata/import/commit',[App\Controllers\ImportController::class,'imp
 $r->get('/seller/my-leads',[App\Controllers\SellerController::class,'myLeads']);
 $r->get('/seller/lead',[App\Controllers\SellerController::class,'leadDetail']);
 $r->post('/seller/tipify',[App\Controllers\SellerController::class,'tipify']);
+$r->post('/seller/release',[App\Controllers\SellerController::class,'release']);
 
 // Announcements
 $r->get('/announcements',[App\Controllers\AnnouncementController::class,'index']);

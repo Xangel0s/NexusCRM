@@ -34,7 +34,7 @@
 
 <form class="card mb-3" method="get" action="/backdata/base">
   <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
-  <div class="card-body d-flex gap-2 align-items-end">
+  <div class="card-body d-flex flex-wrap gap-2 align-items-end">
     <div class="flex-grow-1">
       <label class="form-label">Buscar</label>
       <input class="form-control" name="q" value="<?= htmlspecialchars($q ?? '') ?>" placeholder="Nombre, teléfono o email">
@@ -46,6 +46,18 @@
         <option value="1" <?= ($assigned==='1')?'selected':'' ?>>Asignados</option>
         <option value="0" <?= ($assigned==='0')?'selected':'' ?>>No asignados</option>
       </select>
+    </div>
+    <div>
+      <label class="form-label">Tipificación</label>
+      <select class="form-select" name="typed">
+        <option value="" <?= (($_GET['typed'] ?? '')==='')?'selected':'' ?>>Todos</option>
+        <option value="1" <?= (($_GET['typed'] ?? '')==='1')?'selected':'' ?>>Con status</option>
+        <option value="0" <?= (($_GET['typed'] ?? '')==='0')?'selected':'' ?>>Sin status</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Status específico</label>
+      <input class="form-control" name="status" value="<?= htmlspecialchars($_GET['status'] ?? '') ?>" placeholder="Ej: Interesado">
     </div>
     <div>
       <label class="form-label d-block">&nbsp;</label>
