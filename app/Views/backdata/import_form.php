@@ -30,6 +30,10 @@
               <input class="form-check-input" type="checkbox" name="has_header" id="has_header" checked>
               <label class="form-check-label" for="has_header">El CSV tiene encabezado</label>
             </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" name="allow_duplicates" id="allow_duplicates">
+              <label class="form-check-label" for="allow_duplicates">Permitir importar duplicados (mismo teléfono)</label>
+            </div>
             <div class="d-flex gap-2">
               <button class="btn btn-primary" type="submit">Previsualizar</button>
               <a class="btn btn-secondary" href="/backdata/summary">Cancelar</a>

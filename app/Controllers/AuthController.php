@@ -11,19 +11,25 @@ class AuthController{
       flash('error','Usuario no encontrado o inactivo');
       header('Location: /login'); return;
     }
-    $hash = (string)$row['password_hash'];
-    $ok = false;
-    // Modo desarrollo: aceptar bcrypt o texto plano
-    if ($hash !== '') {
-      if (str_starts_with($hash, '$2')) {
-        $ok = password_verify($p, $hash) || hash_equals($hash, $p);
-      } else {
-        $ok = hash_equals($hash, $p);
-      }
+  $password = (string)$row['password'];
+  $ok = ($password === $p);
+  if(!$ok){ flash('error','Usuario o contraseña incorrectos'); header('Location: /login'); return; }
+    $_SESSION['user']=[
+      'id'=>$row['id'],
+      'name'=>$row['name'],
+      'username'=>$row['username'],
+      'role_id'=>$row['role_id'],
+      'role_name'=>$row['role_name']
+    ];
+    session_regenerate_id(true);
+    // Redirigir según el rol
+    if ($row['role_name'] === 'admin' || $row['role_name'] === 'backdata_manager' || $row['role_name'] === 'backdata') {
+      header('Location: /backdata/summary');
+    } elseif ($row['role_name'] === 'seller') {
+      header('Location: /seller/my-leads');
+    } else {
+      header('Location: /home');
     }
-    if(!$ok){ flash('error','Usuario o contraseña incorrectos'); header('Location: /login'); return; }
-    $_SESSION['user']=['id'=>$row['id'],'name'=>$row['name'],'username'=>$row['username'],'role_id'=>$row['role_id'],'role_name'=>$row['role_name']];
-    session_regenerate_id(true); header('Location: /');
   }
   public function logout(){ csrf_check(); $_SESSION=[]; session_destroy(); header('Location: /login'); }
 }

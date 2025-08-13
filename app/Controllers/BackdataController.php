@@ -3,6 +3,15 @@ namespace App\Controllers;
 use PDO; use function db; use function view; use function auth_user; use function csrf_check; use function csrf_token; use function flash;
 
 class BackdataController{
+  public function baseUnarchive(){
+    $this->requireBD();
+    csrf_check();
+    $id = (int)($_POST['id'] ?? 0);
+    if(!$id){ header('Location: /backdata/bases'); return; }
+    db()->prepare('UPDATE import_batches SET archived_at=NULL WHERE id=? AND archived_at IS NOT NULL')->execute([$id]);
+    flash('success','Base desarchivada');
+    header('Location: /backdata/bases');
+  }
   private function requireBD(): void {
     $u = auth_user();
     if(!$u || !in_array($u['role_name'], ['admin','backdata_manager','backdata'])){ http_response_code(403); exit('Forbidden'); }
@@ -52,23 +61,45 @@ class BackdataController{
     view('backdata/leads', ['days'=>$days,'from'=>$from,'to'=>$to,'status'=>$status,'assigned'=>$assigned,'statuses'=>$statuses]);
   }
 
+  // (Legacy placeholder) Day preview route was referenced; implement simple JSON/HTML response of leads for a given day
+  public function leadsDayPreview(){ $this->requireBD();
+    $day = $_GET['day'] ?? date('Y-m-d');
+    $db = db();
+    $stmt = $db->prepare("SELECT l.id,l.full_name,l.phone,l.email,l.status,l.created_at,
+        (SELECT la.assigned_at FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS assigned_at,
+        (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name
+      FROM leads l WHERE DATE(l.created_at)=? ORDER BY l.id DESC LIMIT 200");
+    $stmt->execute([$day]);
+    $rows = $stmt->fetchAll();
+    // Simple lightweight viewless output (could be replaced by dedicated view) for now
+    if(isset($_GET['format']) && $_GET['format']==='json'){
+      header('Content-Type: application/json'); echo json_encode(['day'=>$day,'rows'=>$rows]); return; }
+    echo '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Status</th><th>Asignado a</th><th>Creado</th><th>Asignado</th></tr></thead><tbody>';
+    if(empty($rows)) echo '<tr><td colspan="7" class="text-center text-muted">Sin leads</td></tr>';
+    foreach($rows as $r){
+      echo '<tr><td>#'.(int)$r['id'].'</td><td>'.htmlspecialchars($r['full_name']??'').'</td><td>'.htmlspecialchars($r['phone']??'').'</td><td>'.htmlspecialchars($r['status']??'-').'</td><td>'.htmlspecialchars($r['seller_name']??'-').'</td><td>'.htmlspecialchars($r['created_at']).'</td><td>'.htmlspecialchars($r['assigned_at']??'-').'</td></tr>';
+    }
+    echo '</tbody></table></div>';
+  }
+
   public function bases(){ $this->requireBD();
     $db = db();
     $q = trim($_GET['q'] ?? '');
     $showArchived = isset($_GET['archived']) && $_GET['archived']=='1';
     $where = $showArchived ? 'b.archived_at IS NOT NULL' : 'b.archived_at IS NULL';
     $params = [];
-    if($q!==''){ $where .= ' AND (b.name LIKE ? OR b.tags LIKE ?)'; $params[]='%'.$q.'%'; $params[]='%'.$q+'%'; }
-    $sql = "SELECT b.id,b.name,b.tags,b.created_at,b.archived_at,u.name AS created_by_name,
-              (SELECT COUNT(*) FROM leads l WHERE l.batch_id=b.id) AS total_leads,
-              (SELECT COUNT(*) FROM lead_assignments la WHERE la.lead_id IN (SELECT id FROM leads WHERE batch_id=b.id)) AS assigned,
-              (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=b.id)) AS tipified
-            FROM import_batches b
-            JOIN users u ON u.id=b.created_by
-            WHERE $where
-            ORDER BY b.id DESC LIMIT 200";
-    $stmt = $db->prepare($sql); $stmt->execute($params); $batches = $stmt->fetchAll();
-    view('backdata/bases', compact('batches','q','showArchived'));
+  if($q!==''){ $where .= ' AND (b.name LIKE ? OR b.tags LIKE ?)'; $params[]='%'.$q.'%'; $params[]='%'.$q.'%'; }
+  $sql = "SELECT b.id,b.name,b.tags,b.created_at,b.archived_at,u.name AS created_by_name,
+      (SELECT COUNT(*) FROM leads l WHERE l.batch_id=b.id) AS total_leads,
+      (SELECT COUNT(*) FROM lead_assignments la WHERE la.lead_id IN (SELECT id FROM leads WHERE batch_id=b.id)) AS assigned,
+      (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=b.id)) AS tipified
+    FROM import_batches b
+    JOIN users u ON u.id=b.created_by
+    WHERE $where
+    ORDER BY b.id DESC LIMIT 200";
+  $stmt = $db->prepare($sql); $stmt->execute($params); $batches = $stmt->fetchAll();
+  $noResults = (empty($batches) && $q !== '');
+  view('backdata/bases', ['batches'=>$batches,'q'=>$q,'showArchived'=>$showArchived,'noResults'=>$noResults]);
   }
 
   public function baseDetail(){ $this->requireBD();
@@ -79,7 +110,7 @@ class BackdataController{
     $q = trim($_GET['q'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
     $where = 'l.batch_id=?'; $params = [$id];
-    if($q!==''){ $where .= ' AND (l.phone LIKE ? OR l.full_name LIKE ? OR l.email LIKE ?)'; array_push($params,'%'.$q.'%','%'.$q+'%','%'.$q+'%'); }
+  if($q!==''){ $where .= ' AND (l.phone LIKE ? OR l.full_name LIKE ? OR l.email LIKE ?)'; array_push($params,'%'.$q.'%','%'.$q.'%','%'.$q.'%'); }
     if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
     if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
     $sql = "SELECT l.*,
@@ -179,94 +210,98 @@ class BackdataController{
     header('Location: /backdata/assign');
   }
 
-  public function leadsDayPreview(){ $this->requireBD();
-    $db = db();
-    $date = $_GET['date'] ?? date('Y-m-d');
-    $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
-    $status = trim($_GET['status'] ?? '');
-    $assigned = $_GET['assigned'] ?? '';
-    $where = 'DATE(l.created_at)=?'; $params = [$date];
-    if($status!==''){ $where .= ' AND l.status=?'; $params[]=$status; }
-    if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
-    if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
-    if($assigned==='t1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-    if($assigned==='t0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.status,l.created_at FROM leads l WHERE $where ORDER BY l.id DESC LIMIT $limit";
-    $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
-    view('backdata/leads_day_preview', ['leads'=>$leads,'limit'=>$limit,'date'=>$date]);
-  }
-
-  public function leadsExport(){ $this->requireBD();
-    $db = db();
-    $date = $_GET['date'] ?? date('Y-m-d');
-    $status = trim($_GET['status'] ?? '');
-    $assigned = $_GET['assigned'] ?? '';
-    $where = 'DATE(l.created_at)=?'; $params = [$date];
-    if($status!==''){ $where .= ' AND l.status=?'; $params[]=$status; }
-    if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
-    if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
-    if($assigned==='t1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-    if($assigned==='t0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.status,l.created_at FROM leads l WHERE $where ORDER BY l.id DESC";
-    $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="leads_'.date('Y-m-d', strtotime($date)).'.csv"');
-    $out = fopen('php://output','w');
-    fputcsv($out, ['id','full_name','phone','email','source','status','created_at']);
-    foreach($rows as $r){ fputcsv($out, [$r['id'],$r['full_name'],$r['phone'],$r['email'],$r['source_name'],$r['status'],$r['created_at']]); }
-    fclose($out); exit;
-  }
 
   // Sellers productivity overview
   public function sellers(){ $this->requireBD();
-    $db = db();
-    $from = $_GET['from'] ?? date('Y-m-d', strtotime('-7 days'));
-    $to = $_GET['to'] ?? date('Y-m-d');
-    $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
-    // Sellers list with metrics
-    $params = [$from.' 00:00:00', $to.' 23:59:59', $from.' 00:00:00', $to.' 23:59:59'];
-    $batchWhereAssign = '';
-    $batchWhereBases = '';
-    if($batchId){ $batchWhereAssign = ' AND EXISTS(SELECT 1 FROM leads l2 WHERE l2.id=la.lead_id AND l2.batch_id='.((int)$batchId).')';
-                  $batchWhereBases = ' AND l3.batch_id='.((int)$batchId); }
-    $sql = "SELECT u.id,u.name,u.username,
-              (SELECT COUNT(*) FROM lead_assignments la WHERE la.seller_id=u.id AND la.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS assigned,
-              (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.user_id=u.id AND a.created_at BETWEEN ? AND ?) AS tipified,
-              (SELECT COUNT(DISTINCT l3.batch_id) FROM lead_assignments la3 JOIN leads l3 ON l3.id=la3.lead_id WHERE la3.seller_id=u.id AND la3.assigned_at BETWEEN ? AND ? $batchWhereBases) AS bases
-            FROM users u
-            WHERE u.active=1 AND u.role_id=(SELECT id FROM roles WHERE name='seller' LIMIT 1)
-            ORDER BY u.name";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$from.' 00:00:00',$to.' 23:59:59',$from.' 00:00:00',$to.' 23:59:59',$from.' 00:00:00',$to.' 23:59:59']);
-    $sellers = $stmt->fetchAll();
-    $batches = $db->query("SELECT id,name FROM import_batches ORDER BY id DESC LIMIT 200")->fetchAll();
-    view('backdata/sellers', ['sellers'=>$sellers,'from'=>$from,'to'=>$to,'batch_id'=>$batchId,'batches'=>$batches]);
+    try{
+      $db = db();
+      $from = $_GET['from'] ?? date('Y-m-d', strtotime('-7 days'));
+      $to = $_GET['to'] ?? date('Y-m-d');
+      $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+      // Sellers list with metrics
+      $batchWhereAssign = '';
+      $batchWhereBases = '';
+      $batchWhereList = '';
+      if($batchId){
+        $batchWhereAssign = ' AND EXISTS(SELECT 1 FROM leads l2 WHERE l2.id=la.lead_id AND l2.batch_id='.((int)$batchId).')';
+        $batchWhereBases = ' AND l3.batch_id='.((int)$batchId);
+        $batchWhereList  = ' AND l2.batch_id='.((int)$batchId);
+      }
+      $q = trim($_GET['q'] ?? '');
+
+      $sql = "SELECT u.id,u.name,u.username,
+                (SELECT COUNT(*) FROM lead_assignments la WHERE la.seller_id=u.id AND la.assigned_at BETWEEN ? AND ? $batchWhereAssign) AS assigned,
+                (SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.user_id=u.id AND a.created_at BETWEEN ? AND ?) AS tipified,
+                (SELECT COUNT(DISTINCT l3.batch_id) FROM lead_assignments la3 JOIN leads l3 ON l3.id=la3.lead_id WHERE la3.seller_id=u.id AND la3.assigned_at BETWEEN ? AND ? $batchWhereBases) AS bases,
+                (SELECT COUNT(*) FROM lead_assignments laT WHERE laT.seller_id=u.id) AS assigned_total,
+                (SELECT COUNT(DISTINCT aT.lead_id) FROM lead_activities aT WHERE aT.user_id=u.id) AS tipified_total,
+                (SELECT COUNT(DISTINCT lAll.batch_id) FROM lead_assignments laAll JOIN leads lAll ON lAll.id=laAll.lead_id WHERE laAll.seller_id=u.id) AS bases_total,
+                (SELECT GROUP_CONCAT(DISTINCT b2.name ORDER BY b2.id SEPARATOR ', ')
+                   FROM lead_assignments la2
+                   JOIN leads l2 ON l2.id=la2.lead_id
+                   LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
+                   WHERE la2.seller_id=u.id AND la2.assigned_at BETWEEN ? AND ? $batchWhereList) AS base_names,
+                (SELECT GROUP_CONCAT(DISTINCT b2.tags ORDER BY b2.id SEPARATOR ', ')
+                   FROM lead_assignments la2
+                   JOIN leads l2 ON l2.id=la2.lead_id
+                   LEFT JOIN import_batches b2 ON b2.id=l2.batch_id
+                   WHERE la2.seller_id=u.id AND la2.assigned_at BETWEEN ? AND ? $batchWhereList) AS base_tags
+              FROM users u
+              WHERE u.active=1 AND u.role_id=(SELECT id FROM roles WHERE name='seller' LIMIT 1)";
+      $params = [
+        $from.' 00:00:00',$to.' 23:59:59', // assigned
+        $from.' 00:00:00',$to.' 23:59:59', // tipified
+        $from.' 00:00:00',$to.' 23:59:59', // bases
+        $from.' 00:00:00',$to.' 23:59:59', // base_names
+        $from.' 00:00:00',$to.' 23:59:59', // base_tags
+      ];
+      if($q !== ''){
+        $sql .= " AND (u.name LIKE ? OR u.username LIKE ?)";
+        $like = "%$q%"; $params[] = $like; $params[] = $like;
+      }
+      $sql .= " ORDER BY u.name";
+      $stmt = $db->prepare($sql);
+      $stmt->execute($params);
+      $sellers = $stmt->fetchAll();
+      $batches = $db->query("SELECT id,name FROM import_batches ORDER BY id DESC LIMIT 200")->fetchAll();
+      // Removed flash message (was repetitive). Pass count to view instead.
+      view('backdata/sellers', ['sellers'=>$sellers,'sellers_count'=>count($sellers),'from'=>$from,'to'=>$to,'batch_id'=>$batchId,'batches'=>$batches,'q'=>$q]);
+    } catch(\Throwable $e){
+      flash('error','Error: '.$e->getMessage());
+      view('backdata/sellers', ['sellers'=>[],'sellers_count'=>0,'from'=>date('Y-m-d', strtotime('-7 days')),'to'=>date('Y-m-d'),'batch_id'=>null,'batches'=>[],'q'=>'']);
+    }
   }
 
   public function sellerPreview(){ $this->requireBD();
     $db = db();
-    $sid = (int)($_GET['seller_id'] ?? 0); if(!$sid){ http_response_code(400); exit('Falta seller_id'); }
+    $sid = (int)($_GET['seller_id'] ?? 0);
     $from = $_GET['from'] ?? date('Y-m-d', strtotime('-7 days'));
     $to = $_GET['to'] ?? date('Y-m-d');
     $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
-    $status = trim($_GET['status'] ?? '');
     $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+    $search = trim($_GET['search'] ?? '');
+    if(!$sid){
+      view('backdata/seller_preview', ['rows'=>[], 'limit'=>$limit, 'from'=>$from, 'to'=>$to, 'seller_id'=>$sid, 'batch_id'=>$batchId, 'search'=>$search, 'error'=>'Falta seller_id']);
+      return;
+    }
     $where = 'la.seller_id=? AND la.assigned_at BETWEEN ? AND ?';
     $params = [$sid, $from.' 00:00:00', $to.' 23:59:59'];
     if($batchId){ $where .= ' AND l.batch_id=?'; $params[] = $batchId; }
-    $sql = "SELECT l.id,l.full_name,l.phone,l.email, l.source_name, b.name AS base_name, la.assigned_at,
+    if($search!==''){
+      $where .= ' AND (l.full_name LIKE ? OR l.phone LIKE ? OR b.name LIKE ?)';
+      $like = "%$search%"; $params[]=$like; $params[]=$like; $params[]=$like;
+    }
+    $sql = "SELECT l.id,l.full_name,l.phone,l.email,b.name AS base_name,b.tags AS base_tags,la.assigned_at,
               (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
               (SELECT u2.name FROM lead_activities a2 JOIN users u2 ON u2.id=a2.user_id WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_by,
-              (SELECT a3.created_at FROM lead_activities a3 WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_at
+              (SELECT a3.created_at FROM lead_activities a3 WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_at,
+              (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
             FROM lead_assignments la
             JOIN leads l ON l.id=la.lead_id
             LEFT JOIN import_batches b ON b.id=l.batch_id
             WHERE $where
             ORDER BY la.id DESC LIMIT $limit";
     $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
-    if($status!==''){ $rows = array_values(array_filter($rows, fn($r)=> (string)($r['last_status']??'') === $status)); }
-    // Available statuses for filter (top 10)
-    $sts = $db->query("SELECT DISTINCT status FROM lead_activities ORDER BY status LIMIT 50")->fetchAll(PDO::FETCH_COLUMN);
-    view('backdata/seller_preview', ['rows'=>$rows,'limit'=>$limit,'from'=>$from,'to'=>$to,'seller_id'=>$sid,'status'=>$status,'statuses'=>$sts,'batch_id'=>$batchId]);
+    view('backdata/seller_preview', ['rows'=>$rows,'limit'=>$limit,'from'=>$from,'to'=>$to,'seller_id'=>$sid,'batch_id'=>$batchId,'search'=>$search]);
   }
 }

@@ -87,6 +87,20 @@ ALTER TABLE leads
   ADD COLUMN imported_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   ADD KEY idx_batch_created (batch_id, created_at);
 
+-- Tabla de anuncios (noticias / banners)
+CREATE TABLE IF NOT EXISTS announcements (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(150) NOT NULL,
+  body TEXT NOT NULL,
+  audience VARCHAR(100) NOT NULL DEFAULT 'all', -- CSV de roles (seller,backdata,admin) o 'all'
+  starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ends_at DATETIME NULL,
+  created_by INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
+  KEY idx_ann_active (starts_at, ends_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 ALTER TABLE leads
   ADD CONSTRAINT fk_leads_batch
   FOREIGN KEY (batch_id) REFERENCES import_batches(id)

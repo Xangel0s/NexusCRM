@@ -32,8 +32,9 @@ class ImportController{
       $rows[]=['full_name'=>$full_name,'phone'=>$phone,'email'=>$email,'source'=>$source,'status'=>'pending'];
     }
     fclose($fh);
-    // Check duplicates
-    if($rows){
+    // Check duplicates (only if not allowed)
+    $allowDuplicates = isset($_POST['allow_duplicates']) && $_POST['allow_duplicates']=='on';
+    if($rows && !$allowDuplicates){
       $in = implode(',', array_fill(0, count($rows), '?'));
       $phones = array_column($rows,'phone');
       $stmt = db()->prepare("SELECT phone FROM leads WHERE phone IN ($in)");
@@ -47,6 +48,7 @@ class ImportController{
       'rows'=>$rows,
       'base_name'=>$baseName,
       'tags'=>$tags,
+      'allow_duplicates'=>$allowDuplicates,
       'counts'=>[
         'total'=>count($rows),
         'pending'=>count(array_filter($rows, fn($r)=>($r['status']??'')==='pending')),
@@ -61,6 +63,7 @@ class ImportController{
     $rows = $_SESSION['import_rows'] ?? [];
     $baseName = $_SESSION['import_base_name'] ?? '';
     $tags = $_SESSION['import_tags'] ?? '';
+    $allowDuplicates = isset($_POST['allow_duplicates']) && $_POST['allow_duplicates']=='1';
     unset($_SESSION['import_rows'], $_SESSION['import_base_name'], $_SESSION['import_tags']);
     if(!$rows){ flash('error','No hay datos a importar'); header('Location: /backdata/import'); return; }
     if($baseName===''){ $baseName = 'Base '.date('Y-m-d H:i'); }
@@ -73,10 +76,22 @@ class ImportController{
       $batchId = (int)$db->lastInsertId();
       // Insert leads linked to batch
       $ins = $db->prepare('INSERT INTO leads(full_name,phone,email,source_name,batch_id,imported_at) VALUES(?,?,?,?,?,NOW())');
-      $inserted=0; foreach($rows as $r){ if(($r['status']??'')==='pending'){ try{ $ins->execute([$r['full_name'],$r['phone'],$r['email'],$r['source'],$batchId]); $inserted++; }catch(\Throwable $e){ /* ignore per-row */ } } }
+      $inserted=0; foreach($rows as $r){
+        $isValid = ($r['status']??'')==='pending' || ($allowDuplicates && ($r['status']??'')==='duplicate');
+        if($isValid){
+          try{ $ins->execute([$r['full_name'],$r['phone'],$r['email'],$r['source'],$batchId]); $inserted++; }catch(\Throwable $e){ /* ignore per-row */ }
+        }
+      }
       $db->commit();
     }catch(\Throwable $e){ $db->rollBack(); flash('error','Error creando la Base: '.$e->getMessage()); header('Location: /backdata/import'); return; }
     
+    // Crear anuncio automático (visible a todos) indicando nueva base (crea tabla si falta)
+    try{
+      $db->exec("CREATE TABLE IF NOT EXISTS announcements (id BIGINT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(150) NOT NULL,body TEXT NOT NULL,audience VARCHAR(100) NOT NULL DEFAULT 'all',starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,ends_at DATETIME NULL,created_by INT NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,KEY idx_ann_active (starts_at, ends_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+      $msg = 'Se importó la base "'.preg_replace('/["<>]/','',$baseName).'" con '.$inserted.' leads.';
+      $stmtAnn = $db->prepare('INSERT INTO announcements(title,body,audience,starts_at,created_by) VALUES(?,?,?,?,?)');
+      $stmtAnn->execute(['Nueva base: '.$baseName,$msg,'all',date('Y-m-d H:i:s'),auth_user()['id']]);
+    }catch(\Throwable $e){ /* ignorar */ }
     flash('success', 'Importados: '.$inserted);
     header('Location: /backdata/bases');
   }

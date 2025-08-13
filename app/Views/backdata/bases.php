@@ -31,7 +31,9 @@
           </tr>
         </thead>
         <tbody>
-         <?php if(empty($batches)): ?>
+         <?php if(isset($noResults) && $noResults): ?>
+          <tr><td colspan="9" class="text-center" style="color: #222;">No se encontraron resultados para la búsqueda.</td></tr>
+        <?php elseif(empty($batches)): ?>
           <tr><td colspan="9" class="text-center text-muted">No hay bases aún.</td></tr>
         <?php else: foreach($batches as $b): ?>
           <tr>

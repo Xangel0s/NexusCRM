@@ -52,4 +52,10 @@ $r->post('/backdata/import/commit',[App\Controllers\ImportController::class,'imp
 $r->get('/seller/my-leads',[App\Controllers\SellerController::class,'myLeads']);
 $r->get('/seller/lead',[App\Controllers\SellerController::class,'leadDetail']);
 $r->post('/seller/tipify',[App\Controllers\SellerController::class,'tipify']);
+
+// Announcements
+$r->get('/announcements',[App\Controllers\AnnouncementController::class,'index']);
+$r->get('/announcements/create',[App\Controllers\AnnouncementController::class,'create']);
+$r->post('/announcements/store',[App\Controllers\AnnouncementController::class,'store']);
+$r->post('/announcements/delete',[App\Controllers\AnnouncementController::class,'delete']);
 $r->dispatch();

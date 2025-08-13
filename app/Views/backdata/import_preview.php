@@ -1,4 +1,4 @@
-<?php /** @var array $rows */ /** @var string $base_name */ /** @var string|null $tags */ /** @var array $counts */ /** @var string $csrf */ ?>
+<?php /** @var array $rows */ /** @var string $base_name */ /** @var string|null $tags */ /** @var array $counts */ /** @var string $csrf */ /** @var bool $allow_duplicates */ ?>
 <?php ob_start(); ?>
 <div class="container-fluid">
   <div class="row mb-3">
@@ -16,6 +16,10 @@
           <span class="badge bg-success">Válidos: <?= (int)$counts['pending'] ?></span>
           <span class="badge bg-warning text-dark">Duplicados: <?= (int)$counts['duplicates'] ?></span>
           <span class="badge bg-danger">Inválidos: <?= (int)$counts['invalid'] ?></span>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="allow_duplicates_preview" <?= $allow_duplicates? 'checked':'' ?> disabled>
+          <label class="form-check-label" for="allow_duplicates_preview">Permitir importar duplicados</label>
         </div>
       </div>
     </div>
@@ -63,6 +67,7 @@
       </div>
       <form method="post" action="/backdata/import/commit" class="mt-3">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+        <input type="hidden" name="allow_duplicates" value="<?= $allow_duplicates? '1':'0' ?>">
         <div class="d-flex gap-2">
           <a href="/backdata/import" class="btn btn-light">Volver</a>
           <button class="btn btn-primary" type="submit">Confirmar importación</button>

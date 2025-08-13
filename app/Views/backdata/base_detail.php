@@ -14,11 +14,17 @@
       <button class="btn btn-outline-primary" type="submit">Guardar</button>
     </form>
     <?php if(empty($batch['archived_at'])): ?>
-    <form method="post" action="/backdata/base/archive">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
-      <button class="btn btn-outline-danger" type="submit">Archivar</button>
-    </form>
+      <form method="post" action="/backdata/base/archive">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
+        <button class="btn btn-outline-danger" type="submit">Archivar</button>
+      </form>
+    <?php else: ?>
+      <form method="post" action="/backdata/base/unarchive">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
+        <button class="btn btn-outline-success" type="submit">Desarchivar</button>
+      </form>
     <?php endif; ?>
     <a href="/backdata/bases" class="btn btn-secondary">Volver</a>
   </div>

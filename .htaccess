@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Redirect everything to public/index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ public/index.php [L]
+
+# If accessing public directory directly
+RewriteRule ^public/(.*)$ public/$1 [L]
