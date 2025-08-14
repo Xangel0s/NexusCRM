@@ -41,6 +41,13 @@
     .checkmark{width:70px;height:70px;border-radius:50%;display:inline-block;position:relative;background:#d1e7dd;border:2px solid #198754}
     .checkmark::after{content:""; position:absolute; left:20px; top:32px; width:12px; height:24px; border: solid #198754; border-width:0 5px 5px 0; transform: rotate(45deg) scale(0); transform-origin: left top; animation: pop .35s ease .25s forwards}
     @keyframes pop{to{transform: rotate(45deg) scale(1)}}
+
+  /* Error cross animation */
+  .xmark{width:70px;height:70px;border-radius:50%;display:inline-block;position:relative;background:#f8d7da;border:2px solid #dc3545}
+  .xmark::before,.xmark::after{content:"";position:absolute;left:20px;top:33px;width:30px;height:4px;background:#dc3545;border-radius:2px;transform-origin:center;opacity:0;animation: crossIn .35s ease .2s forwards}
+  .xmark::before{transform:rotate(45deg)}
+  .xmark::after{transform:rotate(-45deg)}
+  @keyframes crossIn{to{opacity:1}}
   </style>
   </head>
 <body class="bg-light">
@@ -98,7 +105,25 @@
       <main class="col p-3">
     <?php if($flash = get_flash()): ?>
       <?php if($flash['type'] === 'error'): ?>
-        <div class="alert alert-danger"><?php echo htmlspecialchars($flash['message']); ?></div>
+        <!-- Modal de error -->
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-4 text-center">
+              <div class="mx-auto mb-3"><span class="xmark"></span></div>
+              <h5 class="mb-2 text-danger">Ocurrió un problema</h5>
+              <p class="text-muted mb-0" id="errorModalMsg"><?php echo htmlspecialchars($flash['message']); ?></p>
+              <div class="mt-3">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          document.addEventListener('DOMContentLoaded', function(){
+            var el = document.getElementById('errorModal');
+            if(el && window.bootstrap){ new bootstrap.Modal(el).show(); }
+          });
+        </script>
       <?php elseif($flash['type'] === 'success'): ?>
         <!-- Modal de éxito -->
         <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
