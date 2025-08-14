@@ -58,7 +58,34 @@ class BackdataController{
   $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
   // Obtener listado de bases para el selector
   $batches = $db->query("SELECT id,name FROM import_batches WHERE archived_at IS NULL ORDER BY id DESC LIMIT 200")->fetchAll();
-  view('backdata/leads', ['leads'=>$leads,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId]);
+
+  // Agrupar por fecha (diario) dentro del rango seleccionado
+  $daysParams = [];
+  $daysWhere = '1=1';
+  // Fecha entre from y to
+  $daysWhere .= ' AND DATE(l.created_at) BETWEEN ? AND ?'; $daysParams[] = $from; $daysParams[] = $to;
+  if($batchId){ $daysWhere .= ' AND l.batch_id = ?'; $daysParams[] = $batchId; }
+  if($q !== ''){ $daysWhere .= " AND (l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)"; $like="%$q%"; $daysParams[]=$like; $daysParams[]=$like; $daysParams[]=$like; }
+  if(isset($_GET['assigned']) && $_GET['assigned']!==''){ if($_GET['assigned']=='1') $daysWhere .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; else $daysWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
+  if(isset($_GET['typed']) && $_GET['typed']!==''){ if($_GET['typed']=='1') $daysWhere .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; else $daysWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
+  if($status !== ''){ $daysWhere .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $daysParams[]=$status; }
+
+  $sqlDays = "SELECT DATE(l.created_at) AS d, COUNT(*) AS total,
+    SUM(CASE WHEN EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id) THEN 1 ELSE 0 END) AS assigned,
+    SUM(CASE WHEN EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id) THEN 1 ELSE 0 END) AS tipified
+    FROM leads l
+    WHERE $daysWhere
+    GROUP BY DATE(l.created_at)
+    ORDER BY DATE(l.created_at) DESC";
+  $stmt2 = $db->prepare($sqlDays);
+  $stmt2->execute($daysParams);
+  $rows = $stmt2->fetchAll();
+  $days = [];
+  foreach($rows as $r){
+    $days[] = ['d'=>$r['d'], 'total'=>(int)$r['total'], 'assigned'=>(int)$r['assigned'], 'tipified'=>(int)$r['tipified']];
+  }
+
+  view('backdata/leads', ['days'=>$days,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId]);
     }
 
   // Lista de bases (función separada) — envolver el siguiente bloque en su propio método
