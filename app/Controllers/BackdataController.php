@@ -139,25 +139,23 @@ class BackdataController{
     flash('success','Base archivada'); header('Location: /backdata/bases');
   }
 
-  // Eliminar una base (y sus leads) con confirmación CSRF
+  // Eliminar una base (accion permanente): restaurado borrado completo de base y sus leads
   public function baseDelete(){ $this->requireBD(); csrf_check(); $id=(int)($_POST['id']??0); if(!$id){ header('Location: /backdata/bases'); return; }
     $db = db();
-    $db->beginTransaction();
     try{
-      // Borrar leads de la base (cascada eliminará asignaciones/actividades por FK)
-      $del = $db->prepare('DELETE FROM leads WHERE batch_id=?');
-      $del->execute([$id]);
-      $deleted = $del->rowCount();
-      // Borrar la base
-      $db->prepare('DELETE FROM import_batches WHERE id=?')->execute([$id]);
+      $db->beginTransaction();
+      // Primero eliminamos los leads asociados; las FK ON DELETE CASCADE limpiarán actividades/asignaciones
+      $stmt = $db->prepare('DELETE FROM leads WHERE batch_id = ?');
+      $stmt->execute([$id]);
+      // Después eliminamos la propia base
+      $db->prepare('DELETE FROM import_batches WHERE id = ?')->execute([$id]);
       $db->commit();
-      flash('success','Base eliminada. Leads borrados: '.$deleted);
-      header('Location: /backdata/bases');
+      flash('success','Base y leads eliminados permanentemente.');
     }catch(\Throwable $e){
-      $db->rollBack();
-      flash('error','No se pudo eliminar: '.$e->getMessage());
-      header('Location: /backdata/base?id='.$id);
+      if($db && $db->inTransaction()) $db->rollBack();
+      flash('error','No se pudo eliminar la base: '.$e->getMessage());
     }
+    header('Location: /backdata/bases');
   }
 
   public function baseRename(){ $this->requireBD(); csrf_check(); $id=(int)($_POST['id']??0); $name=trim($_POST['name']??''); $tags=trim($_POST['tags']??''); if(!$id||$name===''){ header('Location: /backdata/bases'); return; }
