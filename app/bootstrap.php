@@ -108,3 +108,15 @@ function status_pill(?string $status): string {
     $class = $mapClass[$key] ?? 'text-bg-secondary';
     return '<span class="badge rounded-pill '.$class.'">'.htmlspecialchars($label).'</span>';
 }
+
+    // Etiqueta de rol legible en español a partir del slug interno
+    function role_label(string $role): string {
+        switch($role) {
+            case 'admin': return 'Administrador';
+            case 'backdata_manager': return 'Backdata Manager';
+            case 'backdata': return 'Backdata';
+            case 'seller': return 'Vendedor';
+            default:
+                return ucfirst(str_replace('_',' ', $role));
+        }
+    }

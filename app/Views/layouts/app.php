@@ -64,7 +64,7 @@
           <?php if($u = auth_user()): ?>
             <div class="ms-auto d-flex align-items-center gap-3 text-white small">
               <span class="fw-semibold"><?= htmlspecialchars($u['name']) ?></span>
-              <span class="badge bg-secondary text-uppercase" style="letter-spacing:.5px;"><?= htmlspecialchars($u['role_name']) ?></span>
+              <span class="badge bg-secondary text-uppercase" style="letter-spacing:.5px;"><?= htmlspecialchars(role_label($u['role_name'])) ?></span>
               <form method="post" action="/logout" class="d-inline m-0 p-0">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <button class="btn btn-outline-light btn-sm">Salir</button>

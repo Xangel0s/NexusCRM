@@ -23,7 +23,7 @@
                     <td><?= $user['id'] ?></td>
                     <td><?= htmlspecialchars($user['name']) ?></td>
                     <td><?= htmlspecialchars($user['username']) ?></td>
-                    <td><?= htmlspecialchars($user['role_name']) ?></td>
+                    <td><?= htmlspecialchars(role_label($user['role_name'])) ?></td>
                     <td>
                         <span class="badge bg-<?= $user['active'] ? 'success' : 'danger' ?>">
                             <?= $user['active'] ? 'Activo' : 'Inactivo' ?>
