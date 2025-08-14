@@ -15,15 +15,15 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th><a href="?order=id" class="text-decoration-none text-dark">ID <i class="bi bi-arrow-down-up"></i></a></th>
-                    <th><a href="?order=name" class="text-decoration-none text-dark">Nombre <i class="bi bi-arrow-down-up"></i></a></th>
-                    <th><a href="?order=username" class="text-decoration-none text-dark">Usuario <i class="bi bi-arrow-down-up"></i></a></th>
-                    <th><a href="?order=role" class="text-decoration-none text-dark">Rol <i class="bi bi-arrow-down-up"></i></a></th>
-                    <th><a href="?order=active" class="text-decoration-none text-dark">Estado <i class="bi bi-arrow-down-up"></i></a></th>
+                    <th class="sortable" data-col="id">ID <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable" data-col="name">Nombre <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable" data-col="username">Usuario <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable" data-col="role">Rol <i class="bi bi-arrow-down-up"></i></th>
+                    <th class="sortable" data-col="active">Estado <i class="bi bi-arrow-down-up"></i></th>
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="usersTableBody">
                 <?php foreach ($users as $user): ?>
                 <tr>
                     <td><?= $user['id'] ?></td>
@@ -48,6 +48,44 @@
                 </tr>
                 <?php endforeach; ?>
             </tbody>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('table');
+    const tbody = document.getElementById('usersTableBody');
+    let currentSort = { col: null, dir: null };
+    function getCellValue(row, col) {
+        if(col === 'active') return row.querySelector('span.badge').textContent.trim();
+        if(col === 'role') return row.children[3].textContent.trim();
+        return row.querySelector(`[data-col='${col}']`) ? row.querySelector(`[data-col='${col}']`).textContent.trim() : row.children[table.querySelector(`th[data-col='${col}']`).cellIndex].textContent.trim();
+    }
+    function sortTable(col, dir) {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+            let va = getCellValue(a, col);
+            let vb = getCellValue(b, col);
+            if(col === 'id') { va = parseInt(va); vb = parseInt(vb); }
+            if(dir === 'asc') return va > vb ? 1 : va < vb ? -1 : 0;
+            else return va < vb ? 1 : va > vb ? -1 : 0;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+    }
+    table.querySelectorAll('th.sortable').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', function() {
+            const col = th.getAttribute('data-col');
+            let dir = 'desc';
+            if(currentSort.col === col && currentSort.dir === 'desc') dir = 'asc';
+            else if(currentSort.col === col && currentSort.dir === 'asc') dir = null;
+            currentSort = { col: dir ? col : null, dir };
+            table.querySelectorAll('th.sortable i').forEach(i => { i.className = 'bi bi-arrow-down-up'; });
+            if(dir === 'desc') th.querySelector('i').className = 'bi bi-arrow-down';
+            else if(dir === 'asc') th.querySelector('i').className = 'bi bi-arrow-up';
+            if(dir) sortTable(col, dir); else location.reload();
+        });
+    });
+});
+</script>
         </table>
     </div>
 </div>

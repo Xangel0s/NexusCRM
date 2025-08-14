@@ -15,8 +15,10 @@ class Router {
     public function dispatch(): void {
         // Registrar rutas para preview de vendedor
         $this->get('/backdata/seller/preview', [\App\Controllers\BackdataController::class, 'sellerPreview']);
-        // Registrar rutas para desarchivar base
+    // Registrar rutas para desarchivar base
         $this->post('/backdata/base/unarchive', [\App\Controllers\BackdataController::class, 'baseUnarchive']);
+    // Eliminar base
+    $this->post('/backdata/base/delete', [\App\Controllers\BackdataController::class, 'baseDelete']);
         $httpMethod = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         

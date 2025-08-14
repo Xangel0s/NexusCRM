@@ -2,7 +2,7 @@
 <?php ob_start(); ?>
 <div class="d-flex align-items-center justify-content-between mb-3">
   <div>
-    <h5 class="mb-1">Base #<?= (int)$batch['id'] ?> — <?= htmlspecialchars($batch['name']) ?></h5>
+  <h5 class="mb-1"><i class="bi bi-file-earmark-text-fill me-2"></i>Base #<?= (int)$batch['id'] ?> — <?= htmlspecialchars($batch['name']) ?></h5>
     <div class="text-muted small">Etiquetas: <?= htmlspecialchars($batch['tags'] ?? '') ?> · Creada: <?= htmlspecialchars($batch['created_at']) ?><?= !empty($batch['archived_at'])? ' · Archivada: '.htmlspecialchars($batch['archived_at']):'' ?></div>
   </div>
   <div class="d-flex gap-2">
@@ -93,8 +93,8 @@
 
 <div class="card">
   <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-striped table-hover mb-0">
+    <div class="table-responsive" style="width:100%; overflow-x:auto;">
+      <table class="table table-striped table-hover mb-0" style="min-width:1200px;">
         <thead><tr>
           <th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Creado</th><th>Asignado a</th><th>Status</th><th>Tipificado por</th><th>Fecha status</th><th>Nota</th>
         </tr></thead>
@@ -118,7 +118,7 @@
               <td><?= status_pill($l['last_status'] ?? '') ?></td>
               <td><?= htmlspecialchars($l['last_status_by'] ?? '-') ?></td>
               <td><?= htmlspecialchars($l['last_status_at'] ?? '-') ?></td>
-              <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($l['last_note'] ?? '-') ?>"><?= htmlspecialchars($l['last_note'] ?? '-') ?></td>
+              <td style="max-width:400px; white-space:normal; overflow-wrap:anywhere;" title="<?= htmlspecialchars($l['last_note'] ?? '-') ?>"><?= htmlspecialchars($l['last_note'] ?? '-') ?></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>

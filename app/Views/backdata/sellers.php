@@ -43,49 +43,51 @@
   <table class="table table-hover mb-0" style="min-width:1700px;">
         <thead>
           <tr>
-            <th><a href="?order=name" class="text-decoration-none text-dark">Vendedor <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=username" class="text-decoration-none text-dark">Usuario <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=assigned" class="text-decoration-none text-dark">Asignados <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=tipified" class="text-decoration-none text-dark">Tipificados <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=bases" class="text-decoration-none text-dark">Bases <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=tags" class="text-decoration-none text-dark">Etiquetas <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=assigned_total" class="text-decoration-none text-dark">Asignados (Total) <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=tipified_total" class="text-decoration-none text-dark">Tipificados (Total) <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=bases_total" class="text-decoration-none text-dark">Bases (Total) <i class="bi bi-arrow-down-up"></i></a></th>
-            <th><a href="?order=progress" class="text-decoration-none text-dark">Progreso <i class="bi bi-arrow-down-up"></i></a></th>
+            <th class="sortable" data-col="name" data-type="text">Vendedor <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="username" data-type="text">Usuario <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="assigned" data-type="number">Asignados <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="tipified" data-type="number">Tipificados <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="base_names" data-type="text">Bases <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="base_tags" data-type="text">Etiquetas <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="assigned_total" data-type="number">Asignados (Total) <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="tipified_total" data-type="number">Tipificados (Total) <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="bases_total" data-type="number">Bases (Total) <i class="bi bi-arrow-down-up"></i></th>
+            <th class="sortable" data-col="progress" data-type="number">Progreso <i class="bi bi-arrow-down-up"></i></th>
             <th></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="sellersTableBody">
           <?php if(empty($sellers)): ?>
             <tr><td colspan="11" class="text-center text-muted">Sin resultados</td></tr>
-          <?php else: foreach($sellers as $s): ?>
-            <tr>
-              <td><?= htmlspecialchars($s['name']) ?></td>
-              <td><?= htmlspecialchars($s['username']) ?></td>
-              <td><span class="badge bg-info text-dark"><?= (int)$s['assigned'] ?></span></td>
-              <td><span class="badge bg-success"><?= (int)$s['tipified'] ?></span></td>
-              <td><?= htmlspecialchars($s['base_names'] ?? '-') ?></td>
-              <td><?= htmlspecialchars($s['base_tags'] ?? '-') ?></td>
-              <td><span class="badge bg-secondary"><?= (int)($s['assigned_total'] ?? 0) ?></span></td>
-              <td><span class="badge bg-secondary"><?= (int)($s['tipified_total'] ?? 0) ?></span></td>
-              <td><span class="badge bg-secondary"><?= (int)($s['bases_total'] ?? 0) ?></span></td>
-              <td>
-                <?php 
-                  $a = max(0, (int)$s['assigned']);
-                  $t = max(0, (int)$s['tipified']);
-                  $pct = $a>0 ? round(($t/$a)*100) : 0;
-                ?>
-                <div class="progress" style="height: 8px; width: 120px">
-                  <div class="progress-bar" role="progressbar" style="width: <?= $pct ?>%" aria-valuenow="<?= $pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <div class="small text-muted mt-1"><?= $pct ?>%</div>
-              </td>
-              <td>
-                <a class="btn btn-sm btn-primary" href="#" data-modal-fetch="/backdata/seller/preview?seller_id=<?= (int)$s['id'] ?>&from=<?= urlencode($from) ?>&to=<?= urlencode($to) ?><?php if($batch_id): ?>&batch_id=<?= (int)$batch_id ?><?php endif; ?>" data-modal-title="Vendedor: <?= htmlspecialchars($s['name']) ?>">Abrir información</a>
-              </td>
-            </tr>
-          <?php endforeach; endif; ?>
+          <?php else: ?>
+            <?php foreach($sellers as $s): ?>
+              <tr>
+                <td data-col="name"><?= htmlspecialchars($s['name']) ?></td>
+                <td data-col="username"><?= htmlspecialchars($s['username']) ?></td>
+                <td data-col="assigned"><span class="badge bg-info text-dark"><?= (int)$s['assigned'] ?></span></td>
+                <td data-col="tipified"><span class="badge bg-success"><?= (int)$s['tipified'] ?></span></td>
+                <td data-col="base_names"><?= htmlspecialchars($s['base_names'] ?? '-') ?></td>
+                <td data-col="base_tags"><?= htmlspecialchars($s['base_tags'] ?? '-') ?></td>
+                <td data-col="assigned_total"><span class="badge bg-secondary"><?= (int)($s['assigned_total'] ?? 0) ?></span></td>
+                <td data-col="tipified_total"><span class="badge bg-secondary"><?= (int)($s['tipified_total'] ?? 0) ?></span></td>
+                <td data-col="bases_total"><span class="badge bg-secondary"><?= (int)($s['bases_total'] ?? 0) ?></span></td>
+                <td data-col="progress">
+                  <?php 
+                    $a = max(0, (int)$s['assigned']);
+                    $t = max(0, (int)$s['tipified']);
+                    $pct = $a>0 ? round(($t/$a)*100) : 0;
+                  ?>
+                  <div class="progress" style="height: 8px; width: 120px">
+                    <div class="progress-bar" role="progressbar" style="width: <?= $pct ?>%" aria-valuenow="<?= $pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                  <div class="small text-muted mt-1"><?= $pct ?>%</div>
+                </td>
+                <td>
+                  <a class="btn btn-sm btn-primary" href="#" data-modal-fetch="/backdata/seller/preview?seller_id=<?= (int)$s['id'] ?>&from=<?= urlencode($from) ?>&to=<?= urlencode($to) ?><?php if($batch_id): ?>&batch_id=<?= (int)$batch_id ?><?php endif; ?>" data-modal-title="Vendedor: <?= htmlspecialchars($s['name']) ?>">Abrir información</a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php endif; ?>
         </tbody>
       </table>
     </div>
@@ -94,7 +96,54 @@
 </div>
 
 
-<script></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.querySelector('table');
+  const tbody = document.getElementById('sellersTableBody');
+  let currentSort = { col: null, dir: null };
+  function getCellValue(row, col, type) {
+    let cell = row.querySelector(`[data-col='${col}']`);
+    if(!cell) return '';
+    let val = cell.textContent.trim();
+    if(type === 'number') return parseFloat(val.replace(/[^\d.]/g, ''));
+    if(type === 'date') return new Date(val);
+    return val.toLowerCase();
+  }
+  function sortTable(col, dir, type) {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+      let va = getCellValue(a, col, type);
+      let vb = getCellValue(b, col, type);
+      if(type === 'number' || type === 'date') {
+        if(dir === 'asc') return va - vb;
+        else return vb - va;
+      }
+      if(dir === 'asc') return va > vb ? 1 : va < vb ? -1 : 0;
+      else return va < vb ? 1 : va > vb ? -1 : 0;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', function() {
+      const col = th.getAttribute('data-col');
+      const type = th.getAttribute('data-type');
+      let dir;
+      if(type === 'number' || type === 'date') {
+        dir = currentSort.col === col && currentSort.dir === 'desc' ? 'asc' : 'desc';
+      } else {
+        dir = currentSort.col === col && currentSort.dir === 'asc' ? 'desc' : 'asc';
+      }
+      if(currentSort.col === col && ((type === 'number' || type === 'date') ? currentSort.dir === 'asc' : currentSort.dir === 'desc')) dir = null;
+      currentSort = { col: dir ? col : null, dir };
+      table.querySelectorAll('th.sortable i').forEach(i => { i.className = 'bi bi-arrow-down-up'; });
+      if(dir === 'desc') th.querySelector('i').className = 'bi bi-arrow-down';
+      else if(dir === 'asc') th.querySelector('i').className = 'bi bi-arrow-up';
+      if(dir) sortTable(col, dir, type); else location.reload();
+    });
+  });
+});
+</script>
 </div>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>
 
