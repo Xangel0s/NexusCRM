@@ -37,10 +37,10 @@
     .carousel-dark-arrows .carousel-control-prev-icon{filter: invert(1);} /* hace flecha blanca */
     .carousel-dark-arrows .carousel-control-next-icon{filter: invert(1);}    
 
-    /* Success check animation */
-    .checkmark{width:70px;height:70px;border-radius:50%;display:inline-block;position:relative;background:#d1e7dd;border:2px solid #198754}
-    .checkmark::after{content:""; position:absolute; left:20px; top:32px; width:12px; height:24px; border: solid #198754; border-width:0 5px 5px 0; transform: rotate(45deg) scale(0); transform-origin: left top; animation: pop .35s ease .25s forwards}
-    @keyframes pop{to{transform: rotate(45deg) scale(1)}}
+  /* Success check animation (perfectly centered) */
+  .checkmark{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#d1e7dd;border:2px solid #198754}
+  .checkmark::after{content:"";display:block;width:32px;height:16px;border: solid #198754;border-width:0 0 6px 6px;transform: rotate(-45deg) scale(0);transform-origin:center;animation: pop .35s ease .25s forwards;border-radius:2px}
+  @keyframes pop{to{transform: rotate(-45deg) scale(1)}}
 
   /* Error cross animation */
   .xmark{width:70px;height:70px;border-radius:50%;display:inline-block;position:relative;background:#f8d7da;border:2px solid #dc3545}
