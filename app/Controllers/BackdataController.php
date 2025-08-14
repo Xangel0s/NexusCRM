@@ -207,16 +207,33 @@ class BackdataController{
     flash('success','Base actualizada'); header('Location: /backdata/bases');
   }
 
-  public function basePreview(){ $this->requireBD();
-    $id = (int)($_GET['id'] ?? 0); $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
-    if(!$id){ http_response_code(400); exit('Falta id'); }
+  /**
+   * Muestra el modal de previsualización de una base con tipificación y status.
+   * Valida y sanitiza parámetros, evita interpolación directa en SQL.
+   */
+  public function basePreview(){
+    $this->requireBD();
+    $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
+    $limit = in_array($limit, array(20, 50, 100)) ? $limit : 20;
+    if($id <= 0){ http_response_code(400); exit('Falta id'); }
     $db = db();
-    // métricas básicas de previsualización
+    // Métricas básicas de previsualización (usando consultas preparadas correctamente)
+    $stmtTotal = $db->prepare("SELECT COUNT(*) FROM leads WHERE batch_id=?");
+    $stmtTotal->execute([$id]);
+    $total = (int)$stmtTotal->fetchColumn();
+    $stmtAssigned = $db->prepare("SELECT COUNT(*) FROM lead_assignments WHERE lead_id IN (SELECT id FROM leads WHERE batch_id=?)");
+    $stmtAssigned->execute([$id]);
+    $assignedCount = (int)$stmtAssigned->fetchColumn();
+    $stmtTipified = $db->prepare("SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=?)");
+    $stmtTipified->execute([$id]);
+    $tipifiedCount = (int)$stmtTipified->fetchColumn();
     $counts = [
-      'total' => (int)$db->query("SELECT COUNT(*) FROM leads WHERE batch_id=".(int)$id)->fetchColumn(),
-      'assigned' => (int)$db->query("SELECT COUNT(*) FROM lead_assignments WHERE lead_id IN (SELECT id FROM leads WHERE batch_id=".(int)$id.")")->fetchColumn(),
-      'tipified' => (int)$db->query("SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=".(int)$id.")")->fetchColumn()
+      'total' => $total,
+      'assigned' => $assignedCount,
+      'tipified' => $tipifiedCount
     ];
+    // Consulta principal usando parámetros seguros
     $sql = "SELECT l.id, l.full_name, l.phone, l.email, l.source_name, l.created_at,
       (SELECT la.seller_id FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_id,
       (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name,
@@ -224,8 +241,10 @@ class BackdataController{
       (SELECT a2.created_at FROM lead_activities a2 WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_status_at,
       (SELECT u2.name FROM lead_activities a3 JOIN users u2 ON u2.id=a3.user_id WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_status_by,
       (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
-      FROM leads l WHERE l.batch_id=".(int)$id." ORDER BY l.id DESC LIMIT $limit";
-    $sample = $db->query($sql)->fetchAll();
+      FROM leads l WHERE l.batch_id=? ORDER BY l.id DESC LIMIT ?";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$id, $limit]);
+    $sample = $stmt->fetchAll();
     view('backdata/base_preview', ['leads'=>$sample,'counts'=>$counts,'limit'=>$limit,'id'=>$id]);
   }
 

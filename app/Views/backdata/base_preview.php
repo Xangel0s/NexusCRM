@@ -21,6 +21,7 @@
       <?php if(empty($leads)): ?>
         <tr><td colspan="11" class="text-muted text-center">Sin registros</td></tr>
       <?php else: foreach($leads as $l): ?>
+        <!-- Fila de lead -->
         <tr>
           <td>#<?= (int)$l['id'] ?></td>
           <td><?= htmlspecialchars($l['full_name'] ?? '') ?></td>
@@ -29,31 +30,16 @@
           <td><?= htmlspecialchars($l['source_name'] ?? '') ?></td>
           <td><?= htmlspecialchars($l['created_at'] ?? '') ?></td>
           <td>
-            <?php if(!empty($l['seller_id'])): ?>
-              <?= htmlspecialchars(($l['seller_name'] ?? '')) ?> (<?= '#'.(int)$l['seller_id'] ?>)
-            <?php else: ?>-
-            <?php endif; ?>
+            <?= !empty($l['seller_id']) ? htmlspecialchars(($l['seller_name'] ?? '')) . ' (#' . (int)$l['seller_id'] . ')' : '-' ?>
           </td>
           <td>
-            <?php if(!empty($l['last_status'])): ?>
-              <?= status_pill($l['last_status']) ?>
-            <?php else: ?>
-              -
-            <?php endif; ?>
+            <?= !empty($l['last_status']) ? status_pill($l['last_status']) : '-' ?>
           </td>
           <td>
-            <?php if(!empty($l['last_status_by']) && !empty($l['last_status'])): ?>
-              <?= htmlspecialchars($l['last_status_by']) ?>
-            <?php else: ?>
-              -
-            <?php endif; ?>
+            <?= (!empty($l['last_status_by']) && !empty($l['last_status'])) ? htmlspecialchars($l['last_status_by']) : '-' ?>
           </td>
           <td>
-            <?php if(!empty($l['last_status_at']) && !empty($l['last_status'])): ?>
-              <?= htmlspecialchars($l['last_status_at']) ?>
-            <?php else: ?>
-              -
-            <?php endif; ?>
+            <?= (!empty($l['last_status_at']) && !empty($l['last_status'])) ? htmlspecialchars($l['last_status_at']) : '-' ?>
           </td>
           <td style="max-width:400px; white-space:normal; overflow-wrap:anywhere;" title="<?= htmlspecialchars($l['last_note'] ?? '-') ?>">
             <?= htmlspecialchars($l['last_note'] ?? '-') ?>
