@@ -39,6 +39,7 @@ $r->get('/backdata/base',[App\Controllers\BackdataController::class,'baseDetail'
 $r->get('/backdata/base/preview',[App\Controllers\BackdataController::class,'basePreview']);
 $r->get('/backdata/base/export',[App\Controllers\BackdataController::class,'baseExport']);
 $r->post('/backdata/base/archive',[App\Controllers\BackdataController::class,'baseArchive']);
+$r->post('/backdata/base/delete',[App\Controllers\BackdataController::class,'baseDelete']);
 $r->post('/backdata/base/rename',[App\Controllers\BackdataController::class,'baseRename']);
 $r->get('/backdata/assign',[App\Controllers\BackdataController::class,'assignForm']);
 $r->post('/backdata/assign',[App\Controllers\BackdataController::class,'assignRun']);

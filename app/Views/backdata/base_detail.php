@@ -27,10 +27,35 @@
       </form>
     <?php endif; ?>
   <a href="/backdata/base/export?id=<?= (int)$batch['id'] ?>" class="btn btn-outline-secondary" title="Exportar CSV" target="_blank">Exportar CSV</a>
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">Eliminar</button>
   <a href="/backdata/bases" class="btn btn-secondary">Volver</a>
   </div>
   
 </div>
+
+  <!-- Modal: Confirmar eliminación de base -->
+  <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-danger">Eliminar base</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Esta acción eliminará la base y todos sus leads de forma permanente. ¿Deseas continuar?</p>
+          <div class="alert alert-warning small mb-0">Esta acción no se puede deshacer.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <form method="post" action="/backdata/base/delete" class="d-inline">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+            <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
+            <button type="submit" class="btn btn-danger">Eliminar definitivamente</button>
+          </form>
+        </div>
+      </div>
+    </div>
+   </div>
 
 <form class="card mb-3" method="get" action="/backdata/base">
   <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
