@@ -5,6 +5,12 @@
         <a href="/users-create" class="btn btn-primary">Nuevo usuario</a>
     </div>
     
+    <form method="get" action="/users" class="mb-3">
+        <div class="input-group" style="max-width: 400px;">
+            <input type="text" name="search" class="form-control" placeholder="Buscar por nombre o usuario" value="<?= htmlspecialchars($search ?? '') ?>">
+            <button class="btn btn-outline-secondary" type="submit">Buscar</button>
+        </div>
+    </form>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
