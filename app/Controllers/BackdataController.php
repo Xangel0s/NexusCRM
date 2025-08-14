@@ -83,10 +83,19 @@ class BackdataController{
     $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
     if(isset($_GET['format']) && $_GET['format']==='json'){
       header('Content-Type: application/json'); echo json_encode(['day'=>$day,'rows'=>$rows]); return; }
-    echo '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Status</th><th>Asignado a</th><th>Creado</th><th>Asignado</th></tr></thead><tbody>';
+  echo '<div class="table-responsive"><table class="table table-sm"><thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Estado</th><th>Asignado a</th><th>Creado</th><th>Asignado</th></tr></thead><tbody>';
     if(empty($rows)) echo '<tr><td colspan="7" class="text-center text-muted">Sin leads</td></tr>';
     foreach($rows as $r){
-      echo '<tr><td>#'.(int)$r['id'].'</td><td>'.htmlspecialchars($r['full_name']??'').'</td><td>'.htmlspecialchars($r['phone']??'').'</td><td>'.htmlspecialchars($r['status']??'-').'</td><td>'.htmlspecialchars($r['seller_name']??'-').'</td><td>'.htmlspecialchars($r['created_at']).'</td><td>'.htmlspecialchars($r['assigned_at']??'-').'</td></tr>';
+      $pill = age_status_pill($r['status'] ?? '', $r['created_at'] ?? null);
+      echo '<tr>'
+        .'<td>#'.(int)$r['id'].'</td>'
+        .'<td>'.htmlspecialchars($r['full_name']??'').'</td>'
+        .'<td>'.htmlspecialchars($r['phone']??'').'</td>'
+        .'<td>'.$pill.'</td>'
+        .'<td>'.htmlspecialchars($r['seller_name']??'-').'</td>'
+        .'<td>'.htmlspecialchars($r['created_at']).'</td>'
+        .'<td>'.htmlspecialchars($r['assigned_at']??'-').'</td>'
+        .'</tr>';
     }
     echo '</tbody></table></div>';
   }

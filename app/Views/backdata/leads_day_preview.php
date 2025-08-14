@@ -8,7 +8,7 @@
   </div>
   <div class="table-responsive">
     <table class="table table-sm table-striped mb-0">
-      <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Status</th><th>Creado</th></tr></thead>
+      <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Estado</th><th>Creado</th></tr></thead>
       <tbody>
         <?php if(empty($leads)): ?>
          <tr><td colspan="7" class="text-center text-muted">Sin resultados</td></tr>
@@ -19,7 +19,7 @@
            <td><?= htmlspecialchars($l['phone'] ?? '') ?></td>
            <td><?= htmlspecialchars($l['email'] ?? '') ?></td>
            <td><?= htmlspecialchars($l['source_name'] ?? '') ?></td>
-           <td><span class="badge bg-secondary"><?= htmlspecialchars($l['status'] ?? '') ?></span></td>
+           <td><?= age_status_pill($l['status'] ?? '', $l['created_at'] ?? null) ?></td>
            <td><?= htmlspecialchars($l['created_at'] ?? '') ?></td>
          </tr>
         <?php endforeach; endif; ?>

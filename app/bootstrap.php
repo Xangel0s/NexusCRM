@@ -94,6 +94,9 @@ function status_pill(?string $status): string {
         'contactado' => 'Contactado',
         'interesado' => 'Interesado',
         'no responde' => 'No responde',
+        'new' => 'Nuevo',
+        'duplicado' => 'Duplicado',
+        'duplicate' => 'Duplicado',
     ];
     $label = $mapLabel[$key] ?? ucfirst($status);
     // Color mapping
@@ -104,9 +107,39 @@ function status_pill(?string $status): string {
         'no responde' => 'text-bg-danger', // rojo
         'venta cerrada' => 'text-bg-success', // verde
         'cerrado' => 'text-bg-success',
+        'new' => 'bg-success-subtle text-success-emphasis border border-success-subtle',
+        'duplicado' => 'text-bg-danger',
+        'duplicate' => 'text-bg-danger',
     ];
     $class = $mapClass[$key] ?? 'text-bg-secondary';
     return '<span class="badge rounded-pill '.$class.'">'.htmlspecialchars($label).'</span>';
+}
+
+// Píldora por antigüedad: para status "new" cambia color según días desde creación
+function age_status_pill(?string $status, ?string $createdAt): string {
+    $status = trim((string)($status ?? ''));
+    $key = mb_strtolower($status);
+    if($key !== 'new'){
+        return status_pill($status);
+    }
+    if(!$createdAt){
+        return status_pill('new');
+    }
+    $ts = strtotime($createdAt);
+    if($ts===false){
+        return status_pill('new');
+    }
+    $days = floor((time() - $ts)/86400);
+    if($days <= 14){
+        // Verde clarito
+        return '<span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle">Nuevo</span>';
+    }
+    if($days <= 30){
+        // Amarillo (reciente)
+        return '<span class="badge rounded-pill text-bg-warning">Reciente</span>';
+    }
+    // Rojo (antiguo)
+    return '<span class="badge rounded-pill text-bg-danger">Antiguo</span>';
 }
 
     // Etiqueta de rol legible en español a partir del slug interno
