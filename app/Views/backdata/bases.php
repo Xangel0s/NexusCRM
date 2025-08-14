@@ -47,42 +47,15 @@
             <td><span class="badge bg-success"><?= (int)$b['tipified'] ?></span></td>
             <td>
               <a class="btn btn-sm btn-outline-primary" href="/backdata/base?id=<?= (int)$b['id'] ?>">Ver</a>
-              <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle-preview data-id="<?= (int)$b['id'] ?>">Expandir</button>
+              <a class="btn btn-sm btn-outline-secondary" href="#" data-modal-fetch="/backdata/base/preview?id=<?= (int)$b['id'] ?>&limit=20" data-modal-title="Base #<?= (int)$b['id'] ?> - Preview">Abrir información</a>
             </td>
           </tr>
-          <tr class="bg-light" data-preview-row id="preview-row-<?= (int)$b['id'] ?>" style="display:none">
-            <td colspan="9" id="preview-cell-<?= (int)$b['id'] ?>"></td>
-          </tr>
+          
         <?php endforeach; endif; ?>
         </tbody>
       </table>
     </div>
   </div>
 </div>
-<script>
-document.addEventListener('click', function(e){
-  const btn = e.target.closest('[data-toggle-preview]');
-  if(!btn) return;
-  const id = btn.getAttribute('data-id');
-  const row = document.getElementById('preview-row-'+id);
-  const cell = document.getElementById('preview-cell-'+id);
-  if(row.style.display==='none'){
-    row.style.display='table-row';
-    if(!cell.dataset.loaded){
-      fetch('/backdata/base/preview?id='+id+'&limit=20',{headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(r=>r.text()).then(html=>{ cell.innerHTML=html; cell.dataset.loaded='1'; attachPreviewLinks(cell, id); });
-    }
-  } else {
-    row.style.display='none';
-  }
-});
-function attachPreviewLinks(scope, id){
-  scope.querySelectorAll('[data-preview-link]').forEach(a=>{
-    a.addEventListener('click', function(ev){ ev.preventDefault();
-      fetch(this.href, {headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(r=>r.text()).then(html=>{ scope.innerHTML=html; attachPreviewLinks(scope, id); });
-    });
-  });
-}
-</script>
+<script></script>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>

@@ -167,4 +167,110 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Reusable Preview Modal -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="previewModalTitle">Detalle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="previewModalBody">
+          <div class="text-center text-muted">Cargando…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  // Open modal and load remote HTML into body
+  document.addEventListener('click', function(e){
+    const trigger = e.target.closest('[data-modal-fetch]');
+    if(!trigger) return;
+    e.preventDefault();
+    const url = trigger.getAttribute('data-modal-fetch');
+    const title = trigger.getAttribute('data-modal-title') || 'Detalle';
+    const body = document.getElementById('previewModalBody');
+    const titleEl = document.getElementById('previewModalTitle');
+    titleEl.textContent = title;
+    body.innerHTML = '<div class="text-center text-muted">Cargando…</div>';
+    fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r=>r.text())
+      .then(html=>{ body.innerHTML = html; })
+      .catch(()=>{ body.innerHTML = '<div class="alert alert-danger">No se pudo cargar el contenido.</div>'; });
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+  });
+
+  // Inside modal: handle pagination/limit links for base preview and others
+  document.getElementById('previewModal').addEventListener('click', function(e){
+    const link = e.target.closest('[data-preview-link]');
+    if(link){
+      e.preventDefault();
+      const body = document.getElementById('previewModalBody');
+      fetch(link.href, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.text()).then(html=>{ body.innerHTML = html; })
+        .catch(()=>{ body.innerHTML = '<div class="alert alert-danger">No se pudo cargar.</div>'; });
+      return;
+    }
+    // Leads day preview links inside modal
+    const dayLink = e.target.closest('[data-day-link]');
+    if(dayLink){
+      e.preventDefault();
+      const body = document.getElementById('previewModalBody');
+      fetch(dayLink.href, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.text()).then(html=>{ body.innerHTML = html; })
+        .catch(()=>{ body.innerHTML = '<div class="alert alert-danger">No se pudo cargar.</div>'; });
+      return;
+    }
+    // Seller preview controls (limit and search)
+    const limitBtn = e.target.closest('[data-seller-limit]');
+    if(limitBtn){
+      e.preventDefault();
+      const root = document.querySelector('#previewModalBody [data-seller-ctx]');
+      if(!root) return;
+      const sid = root.getAttribute('data-seller-id');
+      const from = root.getAttribute('data-from');
+      const to = root.getAttribute('data-to');
+      const batchId = root.getAttribute('data-batch-id');
+      const searchInput = root.querySelector('.seller-search-input');
+      const search = searchInput ? searchInput.value.trim() : '';
+      const params = new URLSearchParams({ seller_id:sid, from, to, limit: limitBtn.getAttribute('data-seller-limit') });
+      if(batchId) params.set('batch_id', batchId);
+      if(search!=='') params.set('search', search);
+      const body = document.getElementById('previewModalBody');
+      fetch('/backdata/seller/preview?'+params.toString(), {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.text()).then(html=>{ body.innerHTML=html; })
+        .catch(()=>{ body.innerHTML='<div class="alert alert-danger">Error al recargar.</div>'; });
+      return;
+    }
+    const searchBtn = e.target.closest('[data-seller-search]');
+    if(searchBtn){
+      const root = document.querySelector('#previewModalBody [data-seller-ctx]');
+      if(!root) return;
+      const sid = root.getAttribute('data-seller-id');
+      const from = root.getAttribute('data-from');
+      const to = root.getAttribute('data-to');
+      const batchId = root.getAttribute('data-batch-id');
+      const searchInput = root.querySelector('.seller-search-input');
+      const search = searchInput ? searchInput.value.trim() : '';
+      const params = new URLSearchParams({ seller_id:sid, from, to });
+      if(batchId) params.set('batch_id', batchId);
+      if(search!=='') params.set('search', search);
+      const body = document.getElementById('previewModalBody');
+      fetch('/backdata/seller/preview?'+params.toString(), {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.text()).then(html=>{ body.innerHTML=html; })
+        .catch(()=>{ body.innerHTML='<div class="alert alert-danger">Error al buscar.</div>'; });
+      return;
+    }
+  });
+
+  // Enter key triggers seller search
+  document.getElementById('previewModal').addEventListener('keydown', function(e){
+    if(e.key==='Enter' && e.target && e.target.classList.contains('seller-search-input')){
+      e.preventDefault();
+      const searchBtn = document.querySelector('#previewModal [data-seller-search]');
+      if(searchBtn){ searchBtn.click(); }
+    }
+  });
+  </script>
 </body></html>

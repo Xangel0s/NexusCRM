@@ -51,39 +51,15 @@
         </div>
       </div>
       <div class="d-flex gap-2">
-        <a href="/backdata/leads/export?date=<?= urlencode($d['d']) ?>&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" class="btn btn-sm btn-success">Exportar CSV</a>
-        <button class="btn btn-sm btn-outline-primary" type="button" data-day-toggle data-date="<?= htmlspecialchars($d['d']) ?>">Expandir</button>
+  <a href="/backdata/leads/export?date=<?= urlencode($d['d']) ?>&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" class="btn btn-sm btn-success">Exportar CSV</a>
+  <a href="#" class="btn btn-sm btn-outline-primary" data-modal-fetch="/backdata/leads/day-preview?date=<?= urlencode($d['d']) ?>&limit=20&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" data-modal-title="Leads del <?= htmlspecialchars($d['d']) ?>">Abrir información</a>
       </div>
     </div>
-    <div class="border-top" id="day-preview-<?= htmlspecialchars($d['d']) ?>" style="display:none"></div>
+    
   </div>
 <?php endforeach; endif; ?>
 
-<script>
-document.addEventListener('click', function(e){
-  const btn = e.target.closest('[data-day-toggle]');
-  if(!btn) return;
-  const date = btn.getAttribute('data-date');
-  const cont = document.getElementById('day-preview-'+date);
-  if(cont.style.display==='none'){
-    cont.style.display='block';
-    if(!cont.dataset.loaded){
-  fetch('/backdata/leads/day-preview?date='+encodeURIComponent(date)+'&limit=20&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>',{headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(r=>r.text()).then(html=>{ cont.innerHTML=html; cont.dataset.loaded='1'; attachDayLinks(cont, date); });
-    }
-  } else {
-    cont.style.display='none';
-  }
-});
-function attachDayLinks(scope, date){
-  scope.querySelectorAll('[data-day-link]').forEach(a=>{
-    a.addEventListener('click', function(ev){ ev.preventDefault();
-      fetch(this.href,{headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(r=>r.text()).then(html=>{ scope.innerHTML=html; attachDayLinks(scope, date); })
-    });
-  });
-}
-</script>
+<script></script>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>
 
 

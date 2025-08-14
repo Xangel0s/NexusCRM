@@ -81,11 +81,8 @@
                 <div class="small text-muted mt-1"><?= $pct ?>%</div>
               </td>
               <td>
-                <button class="btn btn-sm btn-primary" type="button" data-seller-toggle data-id="<?= (int)$s['id'] ?>" data-expanded="false" aria-expanded="false">Expandir</button>
+                <a class="btn btn-sm btn-primary" href="#" data-modal-fetch="/backdata/seller/preview?seller_id=<?= (int)$s['id'] ?>&from=<?= urlencode($from) ?>&to=<?= urlencode($to) ?><?php if($batch_id): ?>&batch_id=<?= (int)$batch_id ?><?php endif; ?>" data-modal-title="Vendedor: <?= htmlspecialchars($s['name']) ?>">Abrir información</a>
               </td>
-            </tr>
-            <tr class="bg-light" data-seller-preview-row id="seller-preview-row-<?= (int)$s['id'] ?>" style="display:none">
-              <td colspan="11" id="seller-preview-cell-<?= (int)$s['id'] ?>" data-seller-id="<?= (int)$s['id'] ?>"></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>
@@ -95,86 +92,7 @@
   
 </div>
 
-<script>
-// Toggle inline preview under the clicked seller row
-document.addEventListener('click', function(e){
-  const btn = e.target.closest('[data-seller-toggle]');
-  if(!btn) return;
-  const id = btn.getAttribute('data-id');
-  const row = document.getElementById('seller-preview-row-'+id);
-  const cell = document.getElementById('seller-preview-cell-'+id);
-  const expanded = btn.getAttribute('data-expanded') === 'true';
-  if(expanded){
-    row.style.display='none';
-    btn.textContent='Expandir';
-    btn.classList.remove('btn-secondary');
-    btn.classList.add('btn-primary');
-    btn.setAttribute('data-expanded','false');
-    btn.setAttribute('aria-expanded','false');
-    return;
-  }
-  // Show and load lazily
-  row.style.display='table-row';
-  btn.textContent='Contraer';
-  btn.classList.remove('btn-primary');
-  btn.classList.add('btn-secondary');
-  btn.setAttribute('data-expanded','true');
-  btn.setAttribute('aria-expanded','true');
-  if(!cell.dataset.loaded){
-    const params = new URLSearchParams({seller_id:id, from:'<?= htmlspecialchars($from) ?>', to:'<?= htmlspecialchars($to) ?>'<?php if($batch_id): ?>, batch_id:'<?= (int)$batch_id ?>'<?php endif; ?>});
-    fetch('/backdata/seller/preview?'+params.toString(),{headers:{'X-Requested-With':'XMLHttpRequest'}})
-      .then(r=>r.text())
-      .then(html=>{ cell.innerHTML=html; cell.dataset.loaded='1'; cell.dataset.sellerId=id; })
-      .catch(()=>{ cell.innerHTML='<div class="alert alert-danger">Error al cargar preview</div>'; });
-  }
-});
-
-// Delegated handlers inside any preview: limits and search
-document.addEventListener('click', function(e){
-  const limitBtn = e.target.closest('[data-seller-limit]');
-  if(limitBtn){
-    e.preventDefault();
-    const container = e.target.closest('[id^="seller-preview-cell-"]');
-    if(!container) return;
-    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
-    const limit = limitBtn.getAttribute('data-seller-limit');
-    const searchInput = container.querySelector('.seller-search-input');
-    const search = searchInput ? searchInput.value.trim() : '';
-    reloadSellerPreviewIn(container, sellerId, {limit, search});
-  }
-  const searchBtn = e.target.closest('[data-seller-search]');
-  if(searchBtn){
-    const container = e.target.closest('[id^="seller-preview-cell-"]');
-    if(!container) return;
-    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
-    const searchInput = container.querySelector('.seller-search-input');
-    const search = searchInput ? searchInput.value.trim() : '';
-    reloadSellerPreviewIn(container, sellerId, {search});
-  }
-});
-
-document.addEventListener('keydown', function(e){
-  if(e.key==='Enter'){
-    const input = e.target.closest('.seller-search-input');
-    if(!input) return;
-    const container = input.closest('[id^="seller-preview-cell-"]');
-    if(!container) return;
-    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
-    reloadSellerPreviewIn(container, sellerId, {search: input.value.trim()});
-  }
-});
-
-function reloadSellerPreviewIn(container, sellerId, opts){
-  const params = new URLSearchParams({ seller_id:sellerId, from:'<?= htmlspecialchars($from) ?>', to:'<?= htmlspecialchars($to) ?>' });
-  <?php if($batch_id): ?>params.set('batch_id','<?= (int)$batch_id ?>');<?php endif; ?>
-  if(opts.limit) params.set('limit', opts.limit);
-  if(opts.search!==undefined) params.set('search', opts.search);
-  fetch('/backdata/seller/preview?'+params.toString(), {headers:{'X-Requested-With':'XMLHttpRequest'}})
-    .then(r=>r.text())
-    .then(html=>{ container.innerHTML=html; container.dataset.sellerId = sellerId; })
-    .catch(()=>{ container.innerHTML='<div class="alert alert-danger">Error al cargar preview</div>'; });
-}
-</script>
+<script></script>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>
 
 
