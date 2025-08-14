@@ -1,7 +1,8 @@
 <?php /** @var array $sellers */ /** @var string $from */ /** @var string $to */ /** @var int|null $batch_id */ /** @var array $batches */ /** @var int $sellers_count */ /** @var string|null $q */ ?>
 <?php ob_start(); ?>
+<div class="container-fluid">
 <h5 class="mb-3 d-flex justify-content-between align-items-center">
-  <span>Productividad por vendedor <?php if(isset($sellers_count)): ?><small class="text-muted">(<?= (int)$sellers_count ?> vendedores)</small><?php endif; ?></span>
+  <span><i class="bi bi-bar-chart-fill me-2"></i>Productividad por vendedor <?php if(isset($sellers_count)): ?><small class="text-muted">(<?= (int)$sellers_count ?> vendedores)</small><?php endif; ?></span>
   <form method="get" action="/backdata/sellers" class="d-flex" style="gap:.5rem; max-width:420px;">
     <input type="hidden" name="from" value="<?= htmlspecialchars($from) ?>">
     <input type="hidden" name="to" value="<?= htmlspecialchars($to) ?>">
@@ -39,19 +40,19 @@
 <div class="card mb-3">
   <div class="card-body p-0">
     <div class="table-responsive">
-      <table class="table table-hover mb-0">
+  <table class="table table-hover mb-0" style="min-width:1700px;">
         <thead>
           <tr>
-            <th>Vendedor</th>
-            <th>Usuario</th>
-            <th>Asignados</th>
-            <th>Tipificados</th>
-            <th>Bases</th>
-            <th>Etiquetas</th>
-            <th>Asignados (Total)</th>
-            <th>Tipificados (Total)</th>
-            <th>Bases (Total)</th>
-            <th>Progreso</th>
+            <th><a href="?order=name" class="text-decoration-none text-dark">Vendedor <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=username" class="text-decoration-none text-dark">Usuario <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=assigned" class="text-decoration-none text-dark">Asignados <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=tipified" class="text-decoration-none text-dark">Tipificados <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=bases" class="text-decoration-none text-dark">Bases <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=tags" class="text-decoration-none text-dark">Etiquetas <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=assigned_total" class="text-decoration-none text-dark">Asignados (Total) <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=tipified_total" class="text-decoration-none text-dark">Tipificados (Total) <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=bases_total" class="text-decoration-none text-dark">Bases (Total) <i class="bi bi-arrow-down-up"></i></a></th>
+            <th><a href="?order=progress" class="text-decoration-none text-dark">Progreso <i class="bi bi-arrow-down-up"></i></a></th>
             <th></th>
           </tr>
         </thead>
@@ -92,7 +93,9 @@
   
 </div>
 
+
 <script></script>
+</div>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>
 
 
