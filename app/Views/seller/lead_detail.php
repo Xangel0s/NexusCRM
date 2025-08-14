@@ -50,13 +50,13 @@
       <h5 class="card-title mb-3">Histórico de actividades</h5>
       <div class="table-responsive">
         <table class="table table-sm table-striped mb-0">
-          <thead><tr><th>ID</th><th>Estado</th><th>Nota</th><th>Usuario</th><th>Fecha</th></tr></thead>
+          <thead><tr><th title="ID de la actividad">Act #</th><th>Estado</th><th>Nota</th><th>Usuario</th><th>Fecha</th></tr></thead>
           <tbody>
             <?php if(empty($activities)): ?>
               <tr><td colspan="5" class="text-center text-muted py-3">Sin actividades</td></tr>
             <?php else: foreach($activities as $a): ?>
               <tr>
-                <td>#<?= (int)$a['id'] ?></td>
+                <td title="ID de la actividad">#<?= (int)$a['id'] ?></td>
                 <td><?= status_pill($a['status']) ?></td>
                 <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($a['note'] ?? '-') ?>"><?= htmlspecialchars($a['note'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($a['user_name']) ?></td>
