@@ -217,7 +217,15 @@ class BackdataController{
       'assigned' => (int)$db->query("SELECT COUNT(*) FROM lead_assignments WHERE lead_id IN (SELECT id FROM leads WHERE batch_id=".(int)$id.")")->fetchColumn(),
       'tipified' => (int)$db->query("SELECT COUNT(DISTINCT a.lead_id) FROM lead_activities a WHERE a.lead_id IN (SELECT id FROM leads WHERE batch_id=".(int)$id.")")->fetchColumn()
     ];
-    $sample = $db->query("SELECT id,full_name,phone,email,source_name,created_at FROM leads WHERE batch_id=".(int)$id." ORDER BY id DESC LIMIT $limit")->fetchAll();
+    $sql = "SELECT l.id, l.full_name, l.phone, l.email, l.source_name, l.created_at,
+      (SELECT la.seller_id FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_id,
+      (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name,
+      (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
+      (SELECT a2.created_at FROM lead_activities a2 WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_status_at,
+      (SELECT u2.name FROM lead_activities a3 JOIN users u2 ON u2.id=a3.user_id WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_status_by,
+      (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
+      FROM leads l WHERE l.batch_id=".(int)$id." ORDER BY l.id DESC LIMIT $limit";
+    $sample = $db->query($sql)->fetchAll();
     view('backdata/base_preview', ['leads'=>$sample,'counts'=>$counts,'limit'=>$limit,'id'=>$id]);
   }
 
