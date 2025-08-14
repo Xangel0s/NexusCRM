@@ -68,6 +68,10 @@
       <form method="post" action="/backdata/import/commit" class="mt-3">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
         <input type="hidden" name="allow_duplicates" value="<?= $allow_duplicates? '1':'0' ?>">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="create_announcement" id="create_announcement" value="1">
+          <label class="form-check-label" for="create_announcement">Crear anuncio público indicando la nueva base</label>
+        </div>
         <div class="d-flex gap-2">
           <a href="/backdata/import" class="btn btn-light">Volver</a>
           <button class="btn btn-primary" type="submit">Confirmar importación</button>
