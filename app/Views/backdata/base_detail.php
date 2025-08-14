@@ -46,7 +46,7 @@
           <div class="alert alert-warning small">Esta acción no se puede deshacer.</div>
           <div class="mt-3">
             <label for="confirm_name" class="form-label small">Escribe el nombre de la base para confirmar:</label>
-            <input id="confirm_name" name="confirm_name" class="form-control" type="text" placeholder="Escribe el nombre EXACTO de la base aquí">
+            <input id="confirm_name" name="confirm_name" class="form-control" type="text" placeholder="Escribe el nombre EXACTO de la base aquí" form="deleteForm">
             <div id="confirmHelp" class="form-text small text-muted">Nombre de la base: <strong><?= htmlspecialchars($batch['name']) ?></strong></div>
           </div>
         </div>
