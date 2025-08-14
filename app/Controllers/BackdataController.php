@@ -105,6 +105,8 @@ class BackdataController{
 
     $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
       (SELECT b.name FROM import_batches b WHERE b.id=l.batch_id) AS base_name,
+      (SELECT u2.name FROM lead_assignments la2 JOIN users u2 ON u2.id=la2.seller_id WHERE la2.lead_id=l.id ORDER BY la2.id DESC LIMIT 1) AS assigned_to,
+      (SELECT la2.assigned_at FROM lead_assignments la2 WHERE la2.lead_id=l.id ORDER BY la2.id DESC LIMIT 1) AS assigned_at,
       (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
       (SELECT u.name FROM lead_activities a JOIN users u ON u.id=a.user_id WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_by,
       (SELECT a.note FROM lead_activities a WHERE a.lead_id=l.id AND a.note IS NOT NULL AND a.note<>'' ORDER BY a.id DESC LIMIT 1) AS last_note

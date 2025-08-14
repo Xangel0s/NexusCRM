@@ -8,10 +8,10 @@
   </div>
   <div class="table-responsive">
     <table class="table table-sm table-striped mb-0">
-      <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Estado</th><th>Creado</th></tr></thead>
+      <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Asignado a</th><th>Estado</th><th>Creado</th></tr></thead>
       <tbody>
         <?php if(empty($leads)): ?>
-         <tr><td colspan="7" class="text-center text-muted">Sin resultados</td></tr>
+         <tr><td colspan="8" class="text-center text-muted">Sin resultados</td></tr>
         <?php else: foreach($leads as $l): ?>
          <tr>
            <td>#<?= (int)$l['id'] ?></td>
@@ -19,8 +19,9 @@
            <td><?= htmlspecialchars($l['phone'] ?? '') ?></td>
            <td><?= htmlspecialchars($l['email'] ?? '') ?></td>
            <td><?= htmlspecialchars($l['source_name'] ?? '') ?></td>
+           <td><?= htmlspecialchars($l['assigned_to'] ?? '') ?></td>
            <td><?= age_status_pill($l['status'] ?? '', $l['created_at'] ?? null) ?></td>
-           <td><?= htmlspecialchars($l['created_at'] ?? '') ?></td>
+           <td><?= htmlspecialchars($l['created_at'] ?? '') ?><?php if(!empty($l['assigned_at'])): ?> <div class="small text-muted">asig: <?= htmlspecialchars($l['assigned_at']) ?></div><?php endif; ?></td>
          </tr>
         <?php endforeach; endif; ?>
       </tbody>
