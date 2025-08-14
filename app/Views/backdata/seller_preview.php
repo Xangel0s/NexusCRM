@@ -1,8 +1,8 @@
 <?php /** Simplificada: solo búsqueda por nombre, teléfono o base. */ ?>
 <?php /** @var array $rows */ /** @var int $limit */ /** @var string $from */ /** @var string $to */ /** @var int $seller_id */ /** @var int|null $batch_id */ /** @var string|null $error */ /** @var string $search */ ?>
-<div class="p-2">
+<div class="p-2" data-seller-ctx data-seller-id="<?= (int)$seller_id ?>" data-from="<?= htmlspecialchars($from) ?>" data-to="<?= htmlspecialchars($to) ?>" <?php if($batch_id): ?>data-batch-id="<?= (int)$batch_id ?>"<?php endif; ?>>
   <?php if(isset($error) && $error): ?>
-    <div class="alert alert-danger text-center" style="font-size:1.2em; padding:32px;">Error: <?= htmlspecialchars($error) ?></div>
+  <div class="alert alert-danger text-center" style="font-size:1.2em; padding:32px;">Error: <?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
   <div class="d-flex align-items-center gap-2 mb-2">
     <span class="small text-muted">Mostrar</span>
@@ -12,7 +12,7 @@
     <input type="text" class="form-control form-control-sm ms-auto seller-search-input" placeholder="Nombre, teléfono o base" value="<?= htmlspecialchars($search) ?>" style="max-width:240px;" />
     <button class="btn btn-sm btn-outline-secondary" type="button" data-seller-search>Buscar</button>
   </div>
-  <div class="table-responsive" style="overflow-x:auto; max-height: 60vh; overflow-y:auto;">
+    <div class="table-responsive" style="overflow-x:auto; max-width:100%; max-height: 60vh; overflow-y:auto;">
     <table class="table table-sm table-striped mb-0" style="min-width: 1000px;">
       <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Base</th><th>Etiquetas</th><th>Asignado</th><th>Último estado</th><th>Por</th><th>Fecha</th><th>Nota</th></tr></thead>
       <tbody>
