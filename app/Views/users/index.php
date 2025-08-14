@@ -1,7 +1,7 @@
 <?php $content = ob_start(); ?>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>Usuarios</h1>
+        <h1><i class="bi bi-people-fill me-2"></i>Usuarios</h1>
         <a href="/users-create" class="btn btn-primary">Nuevo usuario</a>
     </div>
     
@@ -15,11 +15,11 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
+                    <th><a href="?order=id" class="text-decoration-none text-dark">ID <i class="bi bi-arrow-down-up"></i></a></th>
+                    <th><a href="?order=name" class="text-decoration-none text-dark">Nombre <i class="bi bi-arrow-down-up"></i></a></th>
+                    <th><a href="?order=username" class="text-decoration-none text-dark">Usuario <i class="bi bi-arrow-down-up"></i></a></th>
+                    <th><a href="?order=role" class="text-decoration-none text-dark">Rol <i class="bi bi-arrow-down-up"></i></a></th>
+                    <th><a href="?order=active" class="text-decoration-none text-dark">Estado <i class="bi bi-arrow-down-up"></i></a></th>
                     <th>Acciones</th>
                 </tr>
             </thead>

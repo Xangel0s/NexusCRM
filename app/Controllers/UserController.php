@@ -19,18 +19,28 @@ class UserController {
     public function index() {
         $this->requireAdmin();
             $search = trim($_GET['search'] ?? '');
+            $order = $_GET['order'] ?? 'name';
+            $dir = strtolower($_GET['dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
+            $allowed = [
+                'id' => 'u.id',
+                'name' => 'u.name',
+                'username' => 'u.username',
+                'role' => 'r.name',
+                'active' => 'u.active'
+            ];
+            $orderBy = $allowed[$order] ?? 'u.name';
             if ($search !== '') {
                 $stmt = db()->prepare(
                     "SELECT u.*, r.name as role_name FROM users u JOIN roles r ON r.id = u.role_id
-                     WHERE u.name LIKE ? OR u.username LIKE ? ORDER BY u.name"
+                     WHERE u.name LIKE ? OR u.username LIKE ? ORDER BY $orderBy $dir"
                 );
                 $like = "%$search%";
                 $stmt->execute([$like, $like]);
                 $users = $stmt->fetchAll();
             } else {
-                $users = db()->query("SELECT u.*, r.name as role_name FROM users u JOIN roles r ON r.id = u.role_id ORDER BY u.name")->fetchAll();
+                $users = db()->query("SELECT u.*, r.name as role_name FROM users u JOIN roles r ON r.id = u.role_id ORDER BY $orderBy $dir")->fetchAll();
             }
-            view('users/index', ['users' => $users, 'search' => $search]);
+            view('users/index', ['users' => $users, 'search' => $search, 'order' => $order, 'dir' => $dir]);
     }
 
     public function create() {
