@@ -142,7 +142,19 @@ class BackdataController{
   // Eliminar una base (accion permanente): restaurado borrado completo de base y sus leads
   public function baseDelete(){ $this->requireBD(); csrf_check(); $id=(int)($_POST['id']??0); if(!$id){ header('Location: /backdata/bases'); return; }
     $db = db();
+    // Validar confirmación de nombre
+    $confirm = trim($_POST['confirm_name'] ?? '');
     try{
+      $stmtName = $db->prepare('SELECT name FROM import_batches WHERE id = ? LIMIT 1');
+      $stmtName->execute([$id]);
+      $row = $stmtName->fetch();
+      $realName = $row ? $row['name'] : '';
+      if($confirm === '' || $confirm !== $realName){
+        flash('error','Nombre de confirmación no coincide. Escribe el nombre exacto de la base para eliminarla.');
+        header('Location: /backdata/base?id='.(int)$id);
+        return;
+      }
+
       $db->beginTransaction();
       // Primero eliminamos los leads asociados; las FK ON DELETE CASCADE limpiarán actividades/asignaciones
       $stmt = $db->prepare('DELETE FROM leads WHERE batch_id = ?');

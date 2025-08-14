@@ -43,19 +43,42 @@
         </div>
         <div class="modal-body">
           <p>Esta acción eliminará la base y todos sus leads de forma permanente. ¿Deseas continuar?</p>
-          <div class="alert alert-warning small mb-0">Esta acción no se puede deshacer.</div>
+          <div class="alert alert-warning small">Esta acción no se puede deshacer.</div>
+          <div class="mt-3">
+            <label for="confirm_name" class="form-label small">Escribe el nombre de la base para confirmar:</label>
+            <input id="confirm_name" name="confirm_name" class="form-control" type="text" placeholder="Escribe el nombre EXACTO de la base aquí">
+            <div id="confirmHelp" class="form-text small text-muted">Nombre de la base: <strong><?= htmlspecialchars($batch['name']) ?></strong></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <form method="post" action="/backdata/base/delete" class="d-inline">
+          <form id="deleteForm" method="post" action="/backdata/base/delete" class="d-inline">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
-            <button type="submit" class="btn btn-danger">Eliminar definitivamente</button>
+            <!-- confirm_name es rellenado por el usuario -->
+            <button id="deleteBtn" type="submit" class="btn btn-danger" disabled>Eliminar definitivamente</button>
           </form>
         </div>
       </div>
     </div>
    </div>
+
+  <script>
+    (function(){
+      const input = document.getElementById('confirm_name');
+      const btn = document.getElementById('deleteBtn');
+      const expected = <?= json_encode($batch['name']) ?>;
+      if(!input || !btn) return;
+      function check(){
+        btn.disabled = input.value !== expected;
+      }
+      input.addEventListener('input', check);
+      // Prevent accidental submit via Enter unless matches
+      document.getElementById('deleteForm').addEventListener('submit', function(e){
+        if(input.value !== expected){ e.preventDefault(); }
+      });
+    })();
+  </script>
 
 <form class="card mb-3" method="get" action="/backdata/base">
   <input type="hidden" name="id" value="<?= (int)$batch['id'] ?>">
