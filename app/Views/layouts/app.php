@@ -10,6 +10,18 @@
     .sidebar .nav-link{color:#333;}
     .sidebar .nav-link.active{background:#0d6efd;color:#fff;}
     .brand-bar{height:56px}
+    /* ---- Soft UI polish ---- */
+    :root{
+      --nx-surface:#ffffff; --nx-border:#e9ecef; --nx-muted:#6c757d;
+    }
+    .card{border:1px solid var(--nx-border); border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,.04);}
+    .card:hover{box-shadow:0 6px 20px rgba(0,0,0,.06); transform:translateY(-1px); transition:all .18s ease;}
+    .table{border-radius:12px; overflow:hidden;}
+    .table tr:hover{background:#f8fafc;}
+    .btn{transition:transform .08s ease, box-shadow .2s ease;}
+    .btn:active{transform:scale(.98)}
+    .badge{border-radius:8px}
+    .form-control,.form-select{border-radius:10px}
     /* Visibilidad mejorada para controles del carrusel de anuncios */
     .carousel-dark-arrows .carousel-control-prev-icon,
     .carousel-dark-arrows .carousel-control-next-icon{
@@ -24,6 +36,11 @@
     .carousel-dark-arrows .carousel-control-next{ width:4rem; }
     .carousel-dark-arrows .carousel-control-prev-icon{filter: invert(1);} /* hace flecha blanca */
     .carousel-dark-arrows .carousel-control-next-icon{filter: invert(1);}    
+
+    /* Success check animation */
+    .checkmark{width:70px;height:70px;border-radius:50%;display:inline-block;position:relative;background:#d1e7dd;border:2px solid #198754}
+    .checkmark::after{content:""; position:absolute; left:20px; top:32px; width:12px; height:24px; border: solid #198754; border-width:0 5px 5px 0; transform: rotate(45deg) scale(0); transform-origin: left top; animation: pop .35s ease .25s forwards}
+    @keyframes pop{to{transform: rotate(45deg) scale(1)}}
   </style>
   </head>
 <body class="bg-light">
@@ -83,7 +100,25 @@
       <?php if($flash['type'] === 'error'): ?>
         <div class="alert alert-danger"><?php echo htmlspecialchars($flash['message']); ?></div>
       <?php elseif($flash['type'] === 'success'): ?>
-        <div class="alert alert-success"><?php echo htmlspecialchars($flash['message']); ?></div>
+        <!-- Modal de éxito -->
+        <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content p-4 text-center">
+              <div class="mx-auto mb-3"><span class="checkmark"></span></div>
+              <h5 class="mb-2">Operación exitosa</h5>
+              <p class="text-muted mb-0" id="statusModalMsg"><?= htmlspecialchars($flash['message']) ?></p>
+              <div class="mt-3">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Continuar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          document.addEventListener('DOMContentLoaded', function(){
+            var el = document.getElementById('statusModal');
+            if(el && window.bootstrap){ new bootstrap.Modal(el).show(); }
+          });
+        </script>
       <?php endif; ?>
     <?php endif; ?>
         <?php echo $content ?? ''; ?>
