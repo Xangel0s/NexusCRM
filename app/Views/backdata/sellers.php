@@ -81,10 +81,12 @@
                 <div class="small text-muted mt-1"><?= $pct ?>%</div>
               </td>
               <td>
-                <button class="btn btn-sm btn-primary" type="button" data-seller-toggle data-id="<?= (int)$s['id'] ?>" data-expanded="false">Expandir</button>
+                <button class="btn btn-sm btn-primary" type="button" data-seller-toggle data-id="<?= (int)$s['id'] ?>" data-expanded="false" aria-expanded="false">Expandir</button>
               </td>
             </tr>
-            <!-- Preview row eliminado, ahora el preview va en el panel superior -->
+            <tr class="bg-light" data-seller-preview-row id="seller-preview-row-<?= (int)$s['id'] ?>" style="display:none">
+              <td colspan="11" id="seller-preview-cell-<?= (int)$s['id'] ?>" data-seller-id="<?= (int)$s['id'] ?>"></td>
+            </tr>
           <?php endforeach; endif; ?>
         </tbody>
       </table>
@@ -93,97 +95,84 @@
   
 </div>
 
-<div id="seller-preview-panel" class="mb-3"></div>
 <script>
+// Toggle inline preview under the clicked seller row
 document.addEventListener('click', function(e){
   const btn = e.target.closest('[data-seller-toggle]');
   if(!btn) return;
   const id = btn.getAttribute('data-id');
-  const previewPanel = document.getElementById('seller-preview-panel');
-  // Si ya está expandido, contraer
-  if(btn.getAttribute('data-expanded') === 'true') {
-    previewPanel.innerHTML = '';
-    btn.textContent = 'Expandir';
+  const row = document.getElementById('seller-preview-row-'+id);
+  const cell = document.getElementById('seller-preview-cell-'+id);
+  const expanded = btn.getAttribute('data-expanded') === 'true';
+  if(expanded){
+    row.style.display='none';
+    btn.textContent='Expandir';
     btn.classList.remove('btn-secondary');
     btn.classList.add('btn-primary');
-    btn.setAttribute('data-expanded', 'false');
+    btn.setAttribute('data-expanded','false');
+    btn.setAttribute('aria-expanded','false');
     return;
   }
-  // Opcional: resaltar vendedor seleccionado
-  document.querySelectorAll('[data-seller-toggle]').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  btn.disabled = true;
-  const params = new URLSearchParams({seller_id:id, from:'<?= htmlspecialchars($from) ?>', to:'<?= htmlspecialchars($to) ?>'<?php if($batch_id): ?>, batch_id:'<?= (int)$batch_id ?>'<?php endif; ?>});
-  fetch('/backdata/seller/preview?'+params.toString(),{headers:{'X-Requested-With':'XMLHttpRequest'}})
-    .then(r=>r.text())
-    .then(html=>{
-      previewPanel.innerHTML = html;
-  previewPanel.dataset.sellerId = id; // Necesario para que búsqueda y límites funcionen
-      btn.textContent = 'Contraer';
-      btn.classList.remove('btn-primary');
-      btn.classList.add('btn-secondary');
-      btn.setAttribute('data-expanded', 'true');
-      btn.disabled = false;
-      previewPanel.scrollIntoView({behavior:'smooth'});
-    })
-    .catch(err=>{
-      previewPanel.innerHTML = '<div class="alert alert-danger">Error al cargar preview</div>';
-      btn.disabled = false;
-    });
+  // Show and load lazily
+  row.style.display='table-row';
+  btn.textContent='Contraer';
+  btn.classList.remove('btn-primary');
+  btn.classList.add('btn-secondary');
+  btn.setAttribute('data-expanded','true');
+  btn.setAttribute('aria-expanded','true');
+  if(!cell.dataset.loaded){
+    const params = new URLSearchParams({seller_id:id, from:'<?= htmlspecialchars($from) ?>', to:'<?= htmlspecialchars($to) ?>'<?php if($batch_id): ?>, batch_id:'<?= (int)$batch_id ?>'<?php endif; ?>});
+    fetch('/backdata/seller/preview?'+params.toString(),{headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r=>r.text())
+      .then(html=>{ cell.innerHTML=html; cell.dataset.loaded='1'; cell.dataset.sellerId=id; })
+      .catch(()=>{ cell.innerHTML='<div class="alert alert-danger">Error al cargar preview</div>'; });
+  }
 });
-function attachSellerLinks(scope, id){
-  scope.querySelectorAll('[data-seller-link]').forEach(a=>{
-    a.addEventListener('click', function(ev){ ev.preventDefault();
-      fetch(this.href,{headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(r=>r.text()).then(html=>{ scope.innerHTML=html; attachSellerLinks(scope,id); });
-    });
-  });
-}
 
-// Delegar eventos para el preview (búsqueda y cambio de límite)
+// Delegated handlers inside any preview: limits and search
 document.addEventListener('click', function(e){
   const limitBtn = e.target.closest('[data-seller-limit]');
   if(limitBtn){
     e.preventDefault();
-    const panel = document.getElementById('seller-preview-panel');
-    if(!panel.dataset.sellerId) return; // No hay preview cargado
-    const sellerId = panel.dataset.sellerId;
+    const container = e.target.closest('[id^="seller-preview-cell-"]');
+    if(!container) return;
+    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
     const limit = limitBtn.getAttribute('data-seller-limit');
-    const searchInput = panel.querySelector('#seller-search-input');
+    const searchInput = container.querySelector('.seller-search-input');
     const search = searchInput ? searchInput.value.trim() : '';
-    reloadSellerPreview(panel, sellerId, {limit, search});
+    reloadSellerPreviewIn(container, sellerId, {limit, search});
   }
-  if(e.target && e.target.id==='seller-search-btn'){
-    const panel = document.getElementById('seller-preview-panel');
-    if(!panel.dataset.sellerId) return;
-    const sellerId = panel.dataset.sellerId;
-    const search = panel.querySelector('#seller-search-input').value.trim();
-    reloadSellerPreview(panel, sellerId, {search});
+  const searchBtn = e.target.closest('[data-seller-search]');
+  if(searchBtn){
+    const container = e.target.closest('[id^="seller-preview-cell-"]');
+    if(!container) return;
+    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
+    const searchInput = container.querySelector('.seller-search-input');
+    const search = searchInput ? searchInput.value.trim() : '';
+    reloadSellerPreviewIn(container, sellerId, {search});
   }
 });
 
 document.addEventListener('keydown', function(e){
   if(e.key==='Enter'){
-    const active = document.activeElement;
-    if(active && active.id==='seller-search-input'){
-      const panel = document.getElementById('seller-preview-panel');
-      if(!panel.dataset.sellerId) return;
-      const sellerId = panel.dataset.sellerId;
-      const search = active.value.trim();
-      reloadSellerPreview(panel, sellerId, {search});
-    }
+    const input = e.target.closest('.seller-search-input');
+    if(!input) return;
+    const container = input.closest('[id^="seller-preview-cell-"]');
+    if(!container) return;
+    const sellerId = container.dataset.sellerId || container.getAttribute('id').replace('seller-preview-cell-','');
+    reloadSellerPreviewIn(container, sellerId, {search: input.value.trim()});
   }
 });
 
-function reloadSellerPreview(panel, sellerId, opts){
+function reloadSellerPreviewIn(container, sellerId, opts){
   const params = new URLSearchParams({ seller_id:sellerId, from:'<?= htmlspecialchars($from) ?>', to:'<?= htmlspecialchars($to) ?>' });
   <?php if($batch_id): ?>params.set('batch_id','<?= (int)$batch_id ?>');<?php endif; ?>
   if(opts.limit) params.set('limit', opts.limit);
   if(opts.search!==undefined) params.set('search', opts.search);
   fetch('/backdata/seller/preview?'+params.toString(), {headers:{'X-Requested-With':'XMLHttpRequest'}})
     .then(r=>r.text())
-    .then(html=>{ panel.innerHTML=html; panel.dataset.sellerId = sellerId; })
-    .catch(()=>{ panel.innerHTML='<div class="alert alert-danger">Error al cargar preview</div>'; });
+    .then(html=>{ container.innerHTML=html; container.dataset.sellerId = sellerId; })
+    .catch(()=>{ container.innerHTML='<div class="alert alert-danger">Error al cargar preview</div>'; });
 }
 </script>
 <?php $content = ob_get_clean(); require __DIR__.'/../layouts/app.php'; ?>

@@ -6,13 +6,13 @@
   <?php endif; ?>
   <div class="d-flex align-items-center gap-2 mb-2">
     <span class="small text-muted">Mostrar</span>
-    <a class="btn btn-sm <?= $limit==20?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="20">20</a>
-    <a class="btn btn-sm <?= $limit==50?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="50">50</a>
-    <a class="btn btn-sm <?= $limit==100?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="100">100</a>
-    <input type="text" class="form-control form-control-sm ms-auto" id="seller-search-input" placeholder="Nombre, teléfono o base" value="<?= htmlspecialchars($search) ?>" style="max-width:240px;" />
-    <button class="btn btn-sm btn-outline-secondary" type="button" id="seller-search-btn">Buscar</button>
+  <a class="btn btn-sm <?= $limit==20?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="20">20</a>
+  <a class="btn btn-sm <?= $limit==50?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="50">50</a>
+  <a class="btn btn-sm <?= $limit==100?'btn-primary':'btn-outline-primary' ?>" href="#" data-seller-limit="100">100</a>
+    <input type="text" class="form-control form-control-sm ms-auto seller-search-input" placeholder="Nombre, teléfono o base" value="<?= htmlspecialchars($search) ?>" style="max-width:240px;" />
+    <button class="btn btn-sm btn-outline-secondary" type="button" data-seller-search>Buscar</button>
   </div>
-  <div class="table-responsive" style="overflow-x:auto;">
+  <div class="table-responsive" style="overflow-x:auto; max-height: 60vh; overflow-y:auto;">
     <table class="table table-sm table-striped mb-0" style="min-width: 1000px;">
       <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Base</th><th>Etiquetas</th><th>Asignado</th><th>Último estado</th><th>Por</th><th>Fecha</th><th>Nota</th></tr></thead>
       <tbody>
