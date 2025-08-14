@@ -22,6 +22,13 @@
     .btn:active{transform:scale(.98)}
     .badge{border-radius:8px}
     .form-control,.form-select{border-radius:10px}
+  .text-bg-warning{color:#664d03;background-color:#fff3cd}
+  .text-bg-danger{color:#842029;background-color:#f8d7da}
+  .text-bg-success{color:#0f5132;background-color:#d1e7dd}
+  .text-bg-secondary{color:#41464b;background-color:#e2e3e5}
+  .text-success-emphasis{color:#0f5132}
+  .bg-success-subtle{background-color:#d1e7dd}
+  .border-success-subtle{border-color:#badbcc !important}
     /* Visibilidad mejorada para controles del carrusel de anuncios */
     .carousel-dark-arrows .carousel-control-prev-icon,
     .carousel-dark-arrows .carousel-control-next-icon{

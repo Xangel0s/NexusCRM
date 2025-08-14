@@ -12,7 +12,7 @@
           <dt class="col-4">Nombre</dt><dd class="col-8"><?= htmlspecialchars($lead['full_name'] ?? '-') ?></dd>
           <dt class="col-4">Teléfono</dt><dd class="col-8"><?= htmlspecialchars($lead['phone'] ?? '-') ?></dd>
           <dt class="col-4">Email</dt><dd class="col-8"><?= htmlspecialchars($lead['email'] ?? '-') ?></dd>
-          <dt class="col-4">Estado actual</dt><dd class="col-8"><?= htmlspecialchars($lead['status'] ?? '-') ?></dd>
+          <dt class="col-4">Estado actual</dt><dd class="col-8"><?= status_pill($lead['status'] ?? '') ?></dd>
           <dt class="col-4">Asignado</dt><dd class="col-8"><?= htmlspecialchars($lead['assigned_at'] ?? '-') ?></dd>
         </dl>
       </div></div>
@@ -30,7 +30,7 @@
               <option value="Contactado">Contactado</option>
               <option value="Interesado">Interesado</option>
               <option value="No responde">No responde</option>
-              <option value="Cerrado">Cerrado</option>
+              <option value="Venta cerrada">Venta cerrada</option>
             </select>
           </div>
           <div>
@@ -57,7 +57,7 @@
             <?php else: foreach($activities as $a): ?>
               <tr>
                 <td>#<?= (int)$a['id'] ?></td>
-                <td><?= htmlspecialchars($a['status']) ?></td>
+                <td><?= status_pill($a['status']) ?></td>
                 <td style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($a['note'] ?? '-') ?>"><?= htmlspecialchars($a['note'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($a['user_name']) ?></td>
                 <td><?= htmlspecialchars($a['created_at']) ?></td>

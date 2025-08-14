@@ -90,7 +90,7 @@
                 <?php else: ?>-
                 <?php endif; ?>
               </td>
-              <td><?= htmlspecialchars($l['last_status'] ?? '-') ?></td>
+              <td><?= status_pill($l['last_status'] ?? '') ?></td>
               <td><?= htmlspecialchars($l['last_status_by'] ?? '-') ?></td>
               <td><?= htmlspecialchars($l['last_status_at'] ?? '-') ?></td>
               <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($l['last_note'] ?? '-') ?>"><?= htmlspecialchars($l['last_note'] ?? '-') ?></td>

@@ -43,7 +43,7 @@
                                 <td>#<?= (int)$l['id'] ?></td>
                                 <td><?= htmlspecialchars($l['full_name'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($l['phone'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($l['last_status'] ?? '-') ?></td>
+                                <td><?= status_pill($l['last_status'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($l['assigned_at'] ?? '-') ?></td>
                                                                 <td class="d-flex gap-1">
                                                                         <a href="/seller/lead?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-primary">Ver</a>

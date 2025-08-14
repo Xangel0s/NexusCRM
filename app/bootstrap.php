@@ -81,3 +81,30 @@ function get_flash() {
     unset($_SESSION['flash']);
     return $flash;
 }
+
+// UI helper: render status as colored pill
+function status_pill(?string $status): string {
+    $status = trim((string)$status);
+    if($status==='') return '<span class="badge rounded-pill text-bg-secondary">-</span>';
+    $key = mb_strtolower($status);
+    // Normalize label mapping
+    $mapLabel = [
+        'cerrado' => 'Venta cerrada',
+        'venta cerrada' => 'Venta cerrada',
+        'contactado' => 'Contactado',
+        'interesado' => 'Interesado',
+        'no responde' => 'No responde',
+    ];
+    $label = $mapLabel[$key] ?? ucfirst($status);
+    // Color mapping
+    $mapClass = [
+        'contactado' => 'text-bg-warning', // amarillo
+        // interesado: un tono intermedio hacia verde
+        'interesado' => 'bg-success-subtle text-success-emphasis border border-success-subtle',
+        'no responde' => 'text-bg-danger', // rojo
+        'venta cerrada' => 'text-bg-success', // verde
+        'cerrado' => 'text-bg-success',
+    ];
+    $class = $mapClass[$key] ?? 'text-bg-secondary';
+    return '<span class="badge rounded-pill '.$class.'">'.htmlspecialchars($label).'</span>';
+}

@@ -27,7 +27,7 @@
             <td><?= htmlspecialchars($r['base_name'] ?? '-') ?></td>
             <td><?= htmlspecialchars($r['base_tags'] ?? '-') ?></td>
             <td><?= htmlspecialchars($r['assigned_at'] ?? '') ?></td>
-            <td><?= htmlspecialchars($r['last_status'] ?? '-') ?></td>
+            <td><?= status_pill($r['last_status'] ?? '') ?></td>
             <td><?= htmlspecialchars($r['last_by'] ?? '-') ?></td>
             <td><?= htmlspecialchars($r['last_at'] ?? '-') ?></td>
             <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= htmlspecialchars($r['last_note'] ?? '-') ?>"><?= htmlspecialchars($r['last_note'] ?? '-') ?></td>
