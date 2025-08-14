@@ -41,20 +41,24 @@ class BackdataController{
     $to = $_GET['to'] ?? date('Y-m-d');
     $status = trim($_GET['status'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
+  $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
     // Lista de estados disponibles
     $statuses = $db->query("SELECT DISTINCT status FROM leads ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
-      $q = trim($_GET['q'] ?? '');
+  $q = trim($_GET['q'] ?? '');
       // Implementación mínima y segura para la lista de leads
       $where = '1=1';
       $params = [];
+  if($batchId){ $where .= ' AND l.batch_id = ?'; $params[] = $batchId; }
       if($q !== ''){ $where .= " AND (l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)"; $like = "%$q%"; $params[]=$like; $params[]=$like; $params[]=$like; }
       if(isset($_GET['assigned']) && $_GET['assigned']!==''){ if($_GET['assigned']=='1') $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; else $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
       if(isset($_GET['typed']) && $_GET['typed']!==''){ if($_GET['typed']=='1') $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; else $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
       if($status !== ''){ $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$status; }
       $sql = "SELECT l.*, (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status
         FROM leads l WHERE $where ORDER BY l.id DESC LIMIT 500";
-      $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
-      view('backdata/leads', ['leads'=>$leads,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned]);
+  $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
+  // Obtener listado de bases para el selector
+  $batches = $db->query("SELECT id,name FROM import_batches WHERE archived_at IS NULL ORDER BY id DESC LIMIT 200")->fetchAll();
+  view('backdata/leads', ['leads'=>$leads,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId]);
     }
 
   // Lista de bases (función separada) — envolver el siguiente bloque en su propio método

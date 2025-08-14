@@ -20,7 +20,7 @@
         <?php endforeach; ?>
       </select>
     </div>
-    <div class="col-md-3">
+  <div class="col-md-3">
       <label class="form-label">Asignación/Tipificado</label>
       <select name="assigned" class="form-select">
         <option value="" <?= $assigned===''?'selected':'' ?>>Todos</option>
@@ -28,6 +28,15 @@
         <option value="0" <?= $assigned==='0'?'selected':'' ?>>No asignados</option>
         <option value="t1" <?= $assigned==='t1'?'selected':'' ?>>Tipificados</option>
         <option value="t0" <?= $assigned==='t0'?'selected':'' ?>>No tipificados</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Base</label>
+      <select name="batch_id" class="form-select">
+        <option value="">Todas</option>
+        <?php foreach($batches ?? [] as $b): ?>
+          <option value="<?= (int)$b['id'] ?>" <?= isset($batchId) && $batchId==(int)$b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
+        <?php endforeach; ?>
       </select>
     </div>
     <div class="col-12">
