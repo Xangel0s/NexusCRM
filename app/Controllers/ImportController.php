@@ -85,13 +85,17 @@ class ImportController{
       $db->commit();
     }catch(\Throwable $e){ $db->rollBack(); flash('error','Error creando la Base: '.$e->getMessage()); header('Location: /backdata/import'); return; }
     
-    // Crear anuncio automático (visible a todos) indicando nueva base (crea tabla si falta)
-    try{
-      $db->exec("CREATE TABLE IF NOT EXISTS announcements (id BIGINT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(150) NOT NULL,body TEXT NOT NULL,audience VARCHAR(100) NOT NULL DEFAULT 'all',starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,ends_at DATETIME NULL,created_by INT NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,KEY idx_ann_active (starts_at, ends_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-      $msg = 'Se importó la base "'.preg_replace('/["<>]/','',$baseName).'" con '.$inserted.' leads.';
-      $stmtAnn = $db->prepare('INSERT INTO announcements(title,body,audience,starts_at,created_by) VALUES(?,?,?,?,?)');
-      $stmtAnn->execute(['Nueva base: '.$baseName,$msg,'all',date('Y-m-d H:i:s'),auth_user()['id']]);
-    }catch(\Throwable $e){ /* ignorar */ }
+    // Crear anuncio automático (visible a todos) indicando nueva base
+    // Ahora opcional: se crea solo si el formulario envía create_announcement=1
+    $createAnnouncement = isset($_POST['create_announcement']) && $_POST['create_announcement']=='1';
+    if($createAnnouncement){
+      try{
+        $db->exec("CREATE TABLE IF NOT EXISTS announcements (id BIGINT AUTO_INCREMENT PRIMARY KEY,title VARCHAR(150) NOT NULL,body TEXT NOT NULL,audience VARCHAR(100) NOT NULL DEFAULT 'all',starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,ends_at DATETIME NULL,created_by INT NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,KEY idx_ann_active (starts_at, ends_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $msg = 'Se importó la base "'.preg_replace('/["<>]/','',$baseName).'" con '.$inserted.' leads.';
+        $stmtAnn = $db->prepare('INSERT INTO announcements(title,body,audience,starts_at,created_by) VALUES(?,?,?,?,?)');
+        $stmtAnn->execute(['Nueva base: '.$baseName,$msg,'all',date('Y-m-d H:i:s'),auth_user()['id']]);
+      }catch(\Throwable $e){ /* ignorar */ }
+    }
     flash('success', 'Importados: '.$inserted);
     header('Location: /backdata/bases');
   }
