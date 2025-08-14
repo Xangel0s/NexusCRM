@@ -84,9 +84,34 @@ class BackdataController{
   foreach($rows as $r){
     $days[] = ['d'=>$r['d'], 'total'=>(int)$r['total'], 'assigned'=>(int)$r['assigned'], 'tipified'=>(int)$r['tipified']];
   }
-
+  // Render the leads listing (daily groups) and close the method
   view('backdata/leads', ['days'=>$days,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId]);
-    }
+  }
+
+  // Mostrar leads de un día en el modal (ruta /backdata/leads/day-preview)
+  public function leadsDayPreview(){ $this->requireBD();
+    $db = db();
+    $date = $_GET['date'] ?? date('Y-m-d');
+    $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
+    $status = trim($_GET['status'] ?? '');
+    $assigned = $_GET['assigned'] ?? '';
+    $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+
+    $where = 'DATE(l.created_at)=?'; $params = [$date];
+    if($batchId){ $where .= ' AND l.batch_id=?'; $params[]=$batchId; }
+    if($status!=='') { $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$status; }
+    if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
+    if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
+
+    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
+      (SELECT b.name FROM import_batches b WHERE b.id=l.batch_id) AS base_name,
+      (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
+      (SELECT u.name FROM lead_activities a JOIN users u ON u.id=a.user_id WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_by,
+      (SELECT a.note FROM lead_activities a WHERE a.lead_id=l.id AND a.note IS NOT NULL AND a.note<>'' ORDER BY a.id DESC LIMIT 1) AS last_note
+      FROM leads l WHERE $where ORDER BY l.id DESC LIMIT $limit";
+    $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
+    view('backdata/leads_day_preview', ['leads'=>$rows,'limit'=>$limit,'date'=>$date]);
+  }
 
   // Lista de bases (función separada) — envolver el siguiente bloque en su propio método
   public function bases(){ $this->requireBD();
