@@ -4,6 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nexus</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     body{min-height:100vh;}
     .sidebar{min-height:100vh;}
@@ -83,22 +84,22 @@
   </header>
 
   <div class="container-fluid">
-    <div class="row">
+    <div class="row align-items-start flex-nowrap">
       <?php if($u): ?>
       <aside class="col-12 col-md-3 col-lg-2 bg-white border-end sidebar p-0">
         <div class="list-group list-group-flush">
           <?php if($u['role_name']==='admin'): ?>
             <div class="list-group-item fw-bold text-uppercase small">Administración</div>
-            <a class="list-group-item list-group-item-action" href="/users">Usuarios</a>
+            <a class="list-group-item list-group-item-action" href="/users"><i class="bi bi-people-fill me-2"></i>Usuarios</a>
             <div class="list-group-item fw-bold text-uppercase small">Backdata</div>
-            <a class="list-group-item list-group-item-action" href="/backdata/summary">Resumen</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/bases">Bases</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/bases/progreso">Progreso Bases</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/sellers">Productividad</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/leads">Leads</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/assign">Asignar</a>
-            <a class="list-group-item list-group-item-action" href="/backdata/import">Importar</a>
-            <a class="list-group-item list-group-item-action" href="/announcements">Anuncios</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/summary"><i class="bi bi-clipboard-data me-2"></i>Resumen</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/bases"><i class="bi bi-database-fill me-2"></i>Bases</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/bases/progreso"><i class="bi bi-bar-chart-steps me-2"></i>Progreso Bases</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/sellers"><i class="bi bi-bar-chart-fill me-2"></i>Productividad</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/leads"><i class="bi bi-person-lines-fill me-2"></i>Leads</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/assign"><i class="bi bi-person-plus-fill me-2"></i>Asignar</a>
+            <a class="list-group-item list-group-item-action" href="/backdata/import"><i class="bi bi-upload me-2"></i>Importar</a>
+            <a class="list-group-item list-group-item-action" href="/announcements"><i class="bi bi-megaphone-fill me-2"></i>Anuncios</a>
           <?php elseif(in_array($u['role_name'], ['backdata_manager','backdata'])): ?>
             <div class="list-group-item fw-bold text-uppercase small">Backdata</div>
             <a class="list-group-item list-group-item-action" href="/backdata/summary">Resumen</a>
@@ -117,7 +118,7 @@
       </aside>
       <?php endif; ?>
 
-      <main class="col p-3">
+  <main class="col p-3" style="min-width:0; overflow-x:auto;">
     <?php if($flash = get_flash()): ?>
       <?php if($flash['type'] === 'error'): ?>
         <!-- Modal de error -->
