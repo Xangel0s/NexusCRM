@@ -142,14 +142,37 @@ function age_status_pill(?string $status, ?string $createdAt): string {
     return '<span class="badge rounded-pill text-bg-danger">Antiguo</span>';
 }
 
-    // Etiqueta de rol legible en español a partir del slug interno
-    function role_label(string $role): string {
-        switch($role) {
-            case 'admin': return 'Administrador';
-            case 'backdata_manager': return 'Backdata Manager';
-            case 'backdata': return 'Backdata';
-            case 'seller': return 'Vendedor';
-            default:
-                return ucfirst(str_replace('_',' ', $role));
-        }
+// Etiqueta de rol legible en español a partir del slug interno
+function role_label(string $role): string {
+    switch($role) {
+        case 'admin': return 'Administrador';
+        case 'backdata_manager': return 'Backdata Manager';
+        case 'backdata': return 'Backdata';
+        case 'seller': return 'Vendedor';
+        default:
+            return ucfirst(str_replace('_',' ', $role));
     }
+}
+
+// Píldora para estado de Base según avance y estado
+function base_status_pill(string $label, $progressPct, bool $archived): string{
+    // Asegurar número
+    $progress = is_numeric($progressPct) ? (float)$progressPct : 0.0;
+    // Prioridad: Archivada > Completada > En curso
+    if($archived){
+        return '<span class="badge rounded-pill text-bg-secondary">Archivada</span>';
+    }
+    if($progress >= 100 || mb_strtolower($label)==='completada'){
+        return '<span class="badge rounded-pill text-bg-success">Completada</span>';
+    }
+    // En curso: color por faltante
+    $remaining = max(0, 100 - $progress);
+    if($remaining <= 25){ // casi
+        $class = 'text-bg-warning'; $txt = 'Casi lista';
+    }elseif($remaining <= 60){
+        $class = 'bg-success-subtle text-success-emphasis border border-success-subtle'; $txt = 'En curso';
+    }else{
+        $class = 'text-bg-danger'; $txt = 'Recién empieza';
+    }
+    return '<span class="badge rounded-pill '.$class.'">'.$txt.'</span>';
+}

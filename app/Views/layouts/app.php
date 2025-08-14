@@ -29,6 +29,14 @@
   .text-success-emphasis{color:#0f5132}
   .bg-success-subtle{background-color:#d1e7dd}
   .border-success-subtle{border-color:#badbcc !important}
+    /* Sidebar section headers darker style */
+    .sidebar .list-group-item.fw-bold.text-uppercase.small{
+      background: #f1f3f5;
+      color: #343a40;
+      letter-spacing: .06em;
+      border-top: 1px solid #e9ecef;
+      border-bottom: 1px solid #e9ecef;
+    }
     /* Visibilidad mejorada para controles del carrusel de anuncios */
     .carousel-dark-arrows .carousel-control-prev-icon,
     .carousel-dark-arrows .carousel-control-next-icon{

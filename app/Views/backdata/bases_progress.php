@@ -41,7 +41,10 @@
               <td><?= htmlspecialchars($b['name']) ?></td>
               <td><?= htmlspecialchars($b['tags'] ?? '') ?></td>
               <td><?= htmlspecialchars($b['created_at']) ?></td>
-              <td><?= htmlspecialchars($b['status_label']) ?></td>
+              <td><?php
+                $arch = !empty($b['archived_at']);
+                echo base_status_pill($b['status_label'] ?? '', $b['progress_pct'] ?? 0, $arch);
+              ?></td>
               <td><span class="badge bg-secondary"><?= (int)$b['total_leads'] ?></span></td>
               <td><span class="badge bg-success"><?= (int)$b['tipified'] ?></span></td>
               <td><span class="badge bg-warning text-dark"><?= (int)$b['pending'] ?></span></td>
