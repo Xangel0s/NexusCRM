@@ -26,10 +26,13 @@ class BackdataController{
     // Tipificados hoy (actividades creadas hoy)
     $typed = $dbh->prepare("SELECT COUNT(*) c FROM lead_activities WHERE DATE(created_at)=? ");
     $typed->execute([$today]); $typed_today = (int)$typed->fetchColumn();
-    // Pendientes hoy: leads sin actividad hoy
-    $pending = $dbh->prepare("SELECT COUNT(*) FROM leads l WHERE DATE(l.created_at)=? AND NOT EXISTS (SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id AND DATE(a.created_at)=?)");
-    $pending->execute([$today,$today]); $pending_today = (int)$pending->fetchColumn();
-    view('backdata/summary', compact('assigned_today','typed_today','pending_today'));
+    // Bases total hoy: leads creados hoy
+    $bases_total = $dbh->prepare("SELECT COUNT(*) FROM leads WHERE DATE(created_at)=?");
+    $bases_total->execute([$today]); $bases_total_today = (int)$bases_total->fetchColumn();
+    // Pendientes de asignar: leads creados hoy que no tienen asignación
+    $pending_assign = $dbh->prepare("SELECT COUNT(*) FROM leads WHERE DATE(created_at)=? AND NOT EXISTS (SELECT 1 FROM lead_assignments la WHERE la.lead_id=leads.id)");
+    $pending_assign->execute([$today]); $pending_assign_today = (int)$pending_assign->fetchColumn();
+    view('backdata/summary', compact('assigned_today','typed_today','bases_total_today','pending_assign_today'));
   }
 
   public function leads(){ $this->requireBD();
