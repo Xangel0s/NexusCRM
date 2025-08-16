@@ -41,18 +41,47 @@ class BackdataController{
     $to = $_GET['to'] ?? date('Y-m-d');
     $status = trim($_GET['status'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
-  $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+    // Support multiple batch ids: batch_id[]=1&batch_id[]=2 or batch_id=1,2
+    $batchIds = [];
+    if(isset($_GET['batch_id']) && $_GET['batch_id']!==''){
+      if(is_array($_GET['batch_id'])){
+        $batchIds = array_values(array_filter(array_map('intval', $_GET['batch_id'])));
+      }else{
+        // allow comma-separated string
+        $raw = (string)$_GET['batch_id'];
+        if(strpos($raw, ',')!==false){
+          $parts = array_map('trim', explode(',', $raw));
+          $batchIds = array_values(array_filter(array_map('intval', $parts)));
+        }else{
+          $batchIds = [ (int)$raw ];
+        }
+      }
+    }
     // Lista de estados disponibles
     $statuses = $db->query("SELECT DISTINCT status FROM leads ORDER BY status")->fetchAll(PDO::FETCH_COLUMN);
   $q = trim($_GET['q'] ?? '');
       // Implementación mínima y segura para la lista de leads
       $where = '1=1';
       $params = [];
-  if($batchId){ $where .= ' AND l.batch_id = ?'; $params[] = $batchId; }
+      if(!empty($batchIds)){
+        $placeholders = implode(',', array_fill(0,count($batchIds),'?'));
+        $where .= " AND l.batch_id IN ($placeholders)"; $params = array_merge($params, $batchIds);
+      }
       if($q !== ''){ $where .= " AND (l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)"; $like = "%$q%"; $params[]=$like; $params[]=$like; $params[]=$like; }
       if(isset($_GET['assigned']) && $_GET['assigned']!==''){ if($_GET['assigned']=='1') $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; else $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
       if(isset($_GET['typed']) && $_GET['typed']!==''){ if($_GET['typed']=='1') $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; else $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-      if($status !== ''){ $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$status; }
+      // Support multiple statuses separated by comma
+      $statusList = [];
+      if($status !== ''){
+        if(strpos($status, ',')!==false){
+          $statusList = array_values(array_filter(array_map('trim', explode(',', $status))));
+        }else{ $statusList = [ $status ]; }
+        if(!empty($statusList)){
+          $sPlace = implode(',', array_fill(0,count($statusList),'?'));
+          $where .= " AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) IN ($sPlace)";
+          $params = array_merge($params, $statusList);
+        }
+      }
       $sql = "SELECT l.*, (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status
         FROM leads l WHERE $where ORDER BY l.id DESC LIMIT 500";
   $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
@@ -64,28 +93,131 @@ class BackdataController{
   $daysWhere = '1=1';
   // Fecha entre from y to
   $daysWhere .= ' AND DATE(l.created_at) BETWEEN ? AND ?'; $daysParams[] = $from; $daysParams[] = $to;
-  if($batchId){ $daysWhere .= ' AND l.batch_id = ?'; $daysParams[] = $batchId; }
+  if(!empty($batchIds)){
+    $place = implode(',', array_fill(0,count($batchIds),'?'));
+    $daysWhere .= " AND l.batch_id IN ($place)"; $daysParams = array_merge($daysParams, $batchIds);
+  }
   if($q !== ''){ $daysWhere .= " AND (l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)"; $like="%$q%"; $daysParams[]=$like; $daysParams[]=$like; $daysParams[]=$like; }
   if(isset($_GET['assigned']) && $_GET['assigned']!==''){ if($_GET['assigned']=='1') $daysWhere .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; else $daysWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
   if(isset($_GET['typed']) && $_GET['typed']!==''){ if($_GET['typed']=='1') $daysWhere .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; else $daysWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
-  if($status !== ''){ $daysWhere .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $daysParams[]=$status; }
-
-  $sqlDays = "SELECT DATE(l.created_at) AS d, COUNT(*) AS total,
-    SUM(CASE WHEN EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id) THEN 1 ELSE 0 END) AS assigned,
-    SUM(CASE WHEN EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id) THEN 1 ELSE 0 END) AS tipified
-    FROM leads l
-    WHERE $daysWhere
-    GROUP BY DATE(l.created_at)
-    ORDER BY DATE(l.created_at) DESC";
-  $stmt2 = $db->prepare($sqlDays);
-  $stmt2->execute($daysParams);
-  $rows = $stmt2->fetchAll();
-  $days = [];
-  foreach($rows as $r){
-    $days[] = ['d'=>$r['d'], 'total'=>(int)$r['total'], 'assigned'=>(int)$r['assigned'], 'tipified'=>(int)$r['tipified']];
+  if(!empty($statusList)){
+    $sPlace2 = implode(',', array_fill(0,count($statusList),'?'));
+    $daysWhere .= " AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) IN ($sPlace2)";
+    $daysParams = array_merge($daysParams, $statusList);
   }
+
+  // Recolectar fechas relevantes desde leads, asignaciones y actividades
+  $dateParams = [$from, $to, $from, $to, $from, $to];
+  $dateQ = [];
+  // filtros adicionales para batch y búsqueda se aplicarán en los conteos individuales
+  $dates = [];
+
+  // Leads dates
+  $qLeads = "SELECT DISTINCT DATE(created_at) AS d FROM leads WHERE DATE(created_at) BETWEEN ? AND ?";
+  $stmtD = $db->prepare($qLeads);
+  $stmtD->execute([$from, $to]);
+  foreach($stmtD->fetchAll() as $r){ $dates[$r['d']] = true; }
+
+  // Assignment dates (join to leads for batch/q filters later when counting)
+  $qAssignDates = "SELECT DISTINCT DATE(la.assigned_at) AS d FROM lead_assignments la WHERE DATE(la.assigned_at) BETWEEN ? AND ?";
+  $stmtD2 = $db->prepare($qAssignDates);
+  $stmtD2->execute([$from, $to]);
+  foreach($stmtD2->fetchAll() as $r){ $dates[$r['d']] = true; }
+
+  // Activity dates
+  $qActDates = "SELECT DISTINCT DATE(a.created_at) AS d FROM lead_activities a WHERE DATE(a.created_at) BETWEEN ? AND ?";
+  $stmtD3 = $db->prepare($qActDates);
+  $stmtD3->execute([$from, $to]);
+  foreach($stmtD3->fetchAll() as $r){ $dates[$r['d']] = true; }
+
+  // Convert dates to array and sort desc
+  $dateList = array_keys($dates);
+  rsort($dateList);
+  $days = [];
+
+  // Prepare statements for counts with optional filters
+  // We'll compute counts using EXISTS subqueries against a single leads alias (l)
+  // so any extra filters that reference l (batch, q, status, assigned/typed) apply reliably
+  $extraWhere = '';
+  $extraParams = [];
+  if(!empty($batchIds)){
+    $p = implode(',', array_fill(0,count($batchIds),'?'));
+    $extraWhere .= " AND l.batch_id IN ($p)"; $extraParams = array_merge($extraParams, $batchIds);
+  }
+  if($q !== ''){
+    $extraWhere .= " AND (l.full_name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)";
+    $like = "%$q%"; $extraParams[]=$like; $extraParams[]=$like; $extraParams[]=$like;
+  }
+  if(!empty($statusList)){
+    $p2 = implode(',', array_fill(0,count($statusList),'?'));
+    $extraWhere .= " AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) IN ($p2)";
+    $extraParams = array_merge($extraParams, $statusList);
+  }
+  // Map the single select 'assigned' which can contain assignment or tipification filters
+  $filterAssigned = null;
+  $filterTyped = null;
+  if(isset($_GET['assigned'])){
+    $a = $_GET['assigned'];
+    if($a === '1' || $a === '0') $filterAssigned = $a;
+    if($a === 't1' || $a === 't0') $filterTyped = ($a === 't1') ? '1' : '0';
+  }
+  if($filterAssigned === '1'){
+    $extraWhere .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)';
+  } elseif($filterAssigned === '0'){
+    $extraWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)';
+  }
+  if($filterTyped === '1'){
+    $extraWhere .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)';
+  } elseif($filterTyped === '0'){
+    $extraWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)';
+  }
+
+  // Total: distinct leads that had any activity that day (created OR assigned OR tipified)
+  $totalSql = "SELECT COUNT(DISTINCT l.id) FROM leads l
+    WHERE (DATE(l.created_at)=? OR EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id AND DATE(la.assigned_at)=?) OR EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id AND DATE(a.created_at)=?))" . $extraWhere;
+
+  // Assigned: leads that have an assignment with assigned_at on that date
+  $assignedSql = "SELECT COUNT(DISTINCT l.id) FROM leads l WHERE EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id AND DATE(la.assigned_at)=?)" . $extraWhere;
+
+  // Tipified: leads that have an activity with created_at on that date
+  $tipifiedSql = "SELECT COUNT(DISTINCT l.id) FROM leads l WHERE EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id AND DATE(a.created_at)=?)" . $extraWhere;
+
+  $stmtTotal = $db->prepare($totalSql);
+  $stmtAssigned = $db->prepare($assignedSql);
+  $stmtTipified = $db->prepare($tipifiedSql);
+
+  foreach($dateList as $d){
+    // total needs three date params (created, assigned, activity) then extra filters
+    $paramsTotal = array_merge([$d, $d, $d], $extraParams);
+    $paramsSingle = array_merge([$d], $extraParams);
+    $stmtTotal->execute($paramsTotal); $total = (int)$stmtTotal->fetchColumn();
+    $stmtAssigned->execute($paramsSingle); $assignedCount = (int)$stmtAssigned->fetchColumn();
+    $stmtTipified->execute($paramsSingle); $tipifiedCount = (int)$stmtTipified->fetchColumn();
+        // Map the single select 'assigned' (which may contain assignment or tipification flags)
+        $filterAssigned = null;
+        $filterTyped = null;
+        if(isset($_GET['assigned'])){
+          $a = $_GET['assigned'];
+          if($a === '1' || $a === '0') $filterAssigned = $a;
+          if($a === 't1' || $a === 't0') $filterTyped = ($a === 't1') ? '1' : '0';
+        }
+        // Apply assigned/typed filters to extraWhere (so counts respect UI filters)
+        if($filterAssigned === '1'){
+          $extraWhere .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)';
+        } elseif($filterAssigned === '0'){
+          $extraWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)';
+        }
+        if($filterTyped === '1'){
+          $extraWhere .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)';
+        } elseif($filterTyped === '0'){
+          $extraWhere .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)';
+        }
+    $days[] = ['d'=>$d, 'total'=>$total, 'assigned'=>$assignedCount, 'tipified'=>$tipifiedCount];
+  }
+  // Backwards compatibility: single batchId for views that expect it
+  $batchId = !empty($batchIds) ? (count($batchIds)===1 ? $batchIds[0] : null) : null;
   // Render the leads listing (daily groups) and close the method
-  view('backdata/leads', ['days'=>$days,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId]);
+  view('backdata/leads', ['days'=>$days,'statuses'=>$statuses,'from'=>$from,'to'=>$to,'q'=>$q,'status'=>$status,'assigned'=>$assigned,'batches'=>$batches,'batchId'=>$batchId,'batchIds'=>$batchIds]);
   }
 
   // Mostrar leads de un día en el modal (ruta /backdata/leads/day-preview)
@@ -95,15 +227,50 @@ class BackdataController{
     $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
     $status = trim($_GET['status'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
-    $batchId = isset($_GET['batch_id']) && $_GET['batch_id']!=='' ? (int)$_GET['batch_id'] : null;
+    // Support multiple batch ids (array or comma-separated)
+    $batchIds = [];
+    if(isset($_GET['batch_id']) && $_GET['batch_id']!==''){
+      if(is_array($_GET['batch_id'])){
+        $batchIds = array_values(array_filter(array_map('intval', $_GET['batch_id'])));
+      }else{
+        $raw = (string)$_GET['batch_id'];
+        if(strpos($raw,',')!==false){ $parts=array_map('trim',explode(',',$raw)); $batchIds = array_values(array_filter(array_map('intval',$parts))); }
+        else{ $batchIds = [ (int)$raw ]; }
+      }
+    }
+    // Support multiple statuses (comma-separated)
+    $statusList = [];
+    if($status!==''){
+      if(strpos($status,',')!==false){ $statusList = array_values(array_filter(array_map('trim', explode(',',$status)))); }
+      else{ $statusList = [$status]; }
+    }
 
-    $where = 'DATE(l.created_at)=?'; $params = [$date];
-    if($batchId){ $where .= ' AND l.batch_id=?'; $params[]=$batchId; }
-    if($status!=='') { $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$status; }
-    if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
-    if($assigned==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
+  // Support including leads by creation date (default), or by assignment/tipification date when requested
+  // default: include assigned leads for the day so assigned-today appear even if created earlier
+    // By default include assigned and tipified so the modal matches the daily cards
+    $includeAssigned = !isset($_GET['include_assigned']) || $_GET['include_assigned']=='1';
+    $includeTipified = !isset($_GET['include_tipified']) || $_GET['include_tipified']=='1';
 
-    $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
+  $whereParts = [];
+  $params = [];
+  // always allow leads created that day
+  $whereParts[] = 'DATE(l.created_at)=?'; $params[] = $date;
+  if($includeAssigned){ $whereParts[] = 'EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id AND DATE(la.assigned_at)=?)'; $params[] = $date; }
+  if($includeTipified){ $whereParts[] = 'EXISTS(SELECT 1 FROM lead_activities a2 WHERE a2.lead_id=l.id AND DATE(a2.created_at)=?)'; $params[] = $date; }
+
+  // Build where: union of created/assigned/tipified for the date. Only apply batch/status filters here
+  $where = '(' . implode(' OR ', $whereParts) . ')';
+  if(!empty($batchIds)){
+    $ph = implode(',', array_fill(0,count($batchIds),'?'));
+    $where .= " AND l.batch_id IN ($ph)"; $params = array_merge($params, $batchIds);
+  }
+  if(!empty($statusList)){
+    $phs = implode(',', array_fill(0,count($statusList),'?'));
+    $where .= " AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) IN ($phs)";
+    $params = array_merge($params, $statusList);
+  }
+
+  $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
       (SELECT b.name FROM import_batches b WHERE b.id=l.batch_id) AS base_name,
       (SELECT u2.name FROM lead_assignments la2 JOIN users u2 ON u2.id=la2.seller_id WHERE la2.lead_id=l.id ORDER BY la2.id DESC LIMIT 1) AS assigned_to,
       (SELECT la2.assigned_at FROM lead_assignments la2 WHERE la2.lead_id=l.id ORDER BY la2.id DESC LIMIT 1) AS assigned_at,
@@ -111,8 +278,8 @@ class BackdataController{
       (SELECT u.name FROM lead_activities a JOIN users u ON u.id=a.user_id WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_by,
       (SELECT a.note FROM lead_activities a WHERE a.lead_id=l.id AND a.note IS NOT NULL AND a.note<>'' ORDER BY a.id DESC LIMIT 1) AS last_note
       FROM leads l WHERE $where ORDER BY l.id DESC LIMIT $limit";
-    $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
-    view('backdata/leads_day_preview', ['leads'=>$rows,'limit'=>$limit,'date'=>$date]);
+  $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
+  view('backdata/leads_day_preview', ['leads'=>$rows,'limit'=>$limit,'date'=>$date,'batchIds'=>$batchIds,'statusList'=>$statusList]);
   }
 
   // Lista de bases (función separada) — envolver el siguiente bloque en su propio método
