@@ -26,6 +26,15 @@
       </tbody>
     </table>
   </div>
+  <?php if(isset($total)): $pages = max(1, ceil($total / $limit)); ?>
+    <nav class="mt-2"><ul class="pagination pagination-sm">
+      <li class="page-item <?= ($page<=1)?'disabled':'' ?>"><a class="page-link" href="?batch_id=<?= (int)$batch_id ?>&limit=<?= (int)$limit ?>&page=<?= max(1,$page-1) ?>">&laquo; Prev</a></li>
+      <?php for($p=1;$p<=max(1,min($pages,10));$p++): ?>
+        <li class="page-item <?= ($p==$page)?'active':'' ?>"><a class="page-link" href="?batch_id=<?= (int)$batch_id ?>&limit=<?= (int)$limit ?>&page=<?= $p ?>"><?= $p ?></a></li>
+      <?php endfor; ?>
+      <li class="page-item <?= ($page>=$pages)?'disabled':'' ?>"><a class="page-link" href="?batch_id=<?= (int)$batch_id ?>&limit=<?= (int)$limit ?>&page=<?= min($pages,$page+1) ?>">Next &raquo;</a></li>
+    </ul></nav>
+  <?php endif; ?>
 </div>
 
 

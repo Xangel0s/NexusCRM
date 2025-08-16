@@ -19,6 +19,12 @@ class Router {
         $this->post('/backdata/base/unarchive', [\App\Controllers\BackdataController::class, 'baseUnarchive']);
     // Eliminar base
     $this->post('/backdata/base/delete', [\App\Controllers\BackdataController::class, 'baseDelete']);
+    // Import routes (form, parse, preview, remove, commit)
+    $this->get('/backdata/import', [\App\Controllers\ImportController::class, 'importForm']);
+    $this->post('/backdata/import/parse', [\App\Controllers\ImportController::class, 'importParse']);
+    $this->get('/backdata/import/preview', [\App\Controllers\ImportController::class, 'importPreview']);
+    $this->post('/backdata/import/remove-selected', [\App\Controllers\ImportController::class, 'importRemoveSelected']);
+    $this->post('/backdata/import/commit', [\App\Controllers\ImportController::class, 'importCommit']);
         $httpMethod = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         

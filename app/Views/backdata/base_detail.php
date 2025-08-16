@@ -108,6 +108,15 @@
       <input class="form-control" name="status" value="<?= htmlspecialchars($_GET['status'] ?? '') ?>" placeholder="Ej: Interesado">
     </div>
     <div>
+      <label class="form-label">Por página</label>
+      <select class="form-select" name="limit">
+        <option value="20">20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="500">500</option>
+      </select>
+    </div>
+    <div>
       <label class="form-label d-block">&nbsp;</label>
       <button class="btn btn-primary" type="submit">Filtrar</button>
     </div>
@@ -116,7 +125,7 @@
 
 <div class="card">
   <div class="card-body p-0">
-    <div class="table-responsive" style="width:100%; overflow-x:auto;">
+  <div class="table-responsive" style="width:100%; overflow-x:auto;">
       <table class="table table-striped table-hover mb-0" style="min-width:1200px;">
         <thead><tr>
           <th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Fuente</th><th>Creado</th><th>Asignado a</th><th>Status</th><th>Tipificado por</th><th>Fecha status</th><th>Nota</th>
@@ -147,6 +156,18 @@
         </tbody>
       </table>
     </div>
+      <?php if(isset($totalRows)): ?>
+        <?php $pages = max(1, ceil($totalRows / ($limit ?? 20))); ?>
+        <nav class="mt-2" aria-label="Paginación">
+          <ul class="pagination pagination-sm">
+            <li class="page-item <?= ($page<=1)?'disabled':'' ?>"><a class="page-link" href="?id=<?= (int)$batch['id'] ?>&limit=<?= (int)$limit ?>&page=<?= max(1,$page-1) ?>">&laquo; Prev</a></li>
+            <?php for($p=1;$p<=$pages && $p<=10;$p++): ?>
+              <li class="page-item <?= ($p==$page)?'active':'' ?>"><a class="page-link" href="?id=<?= (int)$batch['id'] ?>&limit=<?= (int)$limit ?>&page=<?= $p ?>"><?= $p ?></a></li>
+            <?php endfor; ?>
+            <li class="page-item <?= ($page>=$pages)?'disabled':'' ?>"><a class="page-link" href="?id=<?= (int)$batch['id'] ?>&limit=<?= (int)$limit ?>&page=<?= min($pages,$page+1) ?>">Next &raquo;</a></li>
+          </ul>
+        </nav>
+      <?php endif; ?>
   </div>
 </div>
 

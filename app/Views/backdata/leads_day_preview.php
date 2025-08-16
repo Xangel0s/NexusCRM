@@ -2,9 +2,10 @@
 <div class="p-2">
   <div class="d-flex align-items-center gap-2 mb-2">
     <span class="small text-muted">Mostrar</span>
-    <a class="btn btn-sm <?= $limit==20?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=20" data-day-link>20</a>
-    <a class="btn btn-sm <?= $limit==50?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=50" data-day-link>50</a>
-    <a class="btn btn-sm <?= $limit==100?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=100" data-day-link>100</a>
+  <a class="btn btn-sm <?= $limit==20?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=20" data-day-link>20</a>
+  <a class="btn btn-sm <?= $limit==50?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=50" data-day-link>50</a>
+  <a class="btn btn-sm <?= $limit==100?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=100" data-day-link>100</a>
+  <a class="btn btn-sm <?= $limit==500?'btn-primary':'btn-outline-primary' ?>" href="/backdata/leads/day-preview?date=<?= urlencode($date) ?>&limit=500" data-day-link>500</a>
   </div>
   <div class="table-responsive">
   <div class="mb-2 small text-muted">Nota: el listado por defecto incluye leads creados, asignados o tipificados en la fecha seleccionada. Usa los toggles para ajustar.</div>
@@ -27,7 +28,7 @@
         <?php endforeach; endif; ?>
       </tbody>
     </table>
-    <div class="ms-auto d-flex align-items-center gap-2">
+  <div class="ms-auto d-flex align-items-center gap-2">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="includeAssigned" <?php if(!isset($_GET['include_assigned'])||$_GET['include_assigned']=='1') echo 'checked'; ?>>
         <label class="form-check-label small" for="includeAssigned">Incl. asignados</label>
@@ -66,6 +67,15 @@
       if(includeTipified) includeTipified.addEventListener('change', update);
     })();
   </script>
+    <?php if(isset($totalRows)): $pages = max(1, ceil($totalRows / $limit)); ?>
+      <nav class="mt-2"><ul class="pagination pagination-sm">
+        <li class="page-item <?= ($page<=1)?'disabled':'' ?>"><a class="page-link" href="?date=<?= urlencode($date) ?>&limit=<?= (int)$limit ?>&page=<?= max(1,$page-1) ?>">&laquo; Prev</a></li>
+        <?php for($p=1;$p<=max(1,min($pages,10));$p++): ?>
+          <li class="page-item <?= ($p==$page)?'active':'' ?>"><a class="page-link" href="?date=<?= urlencode($date) ?>&limit=<?= (int)$limit ?>&page=<?= $p ?>"><?= $p ?></a></li>
+        <?php endfor; ?>
+        <li class="page-item <?= ($page>=$pages)?'disabled':'' ?>"><a class="page-link" href="?date=<?= urlencode($date) ?>&limit=<?= (int)$limit ?>&page=<?= min($pages,$page+1) ?>">Next &raquo;</a></li>
+      </ul></nav>
+    <?php endif; ?>
 </div>
 
 

@@ -61,7 +61,8 @@
       </div>
       <div class="d-flex gap-2">
   <a href="/backdata/leads/export?date=<?= urlencode($d['d']) ?>&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" class="btn btn-sm btn-success">Exportar CSV</a>
-  <a href="#" class="btn btn-sm btn-outline-primary" data-modal-fetch="/backdata/leads/day-preview?date=<?= urlencode($d['d']) ?>&limit=20&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" data-modal-title="Leads del <?= htmlspecialchars($d['d']) ?>">Abrir información</a>
+  <?php $curLimit = (int)($_GET['limit'] ?? 20); $curLimit = in_array($curLimit,[20,50,100,500])? $curLimit:20; ?>
+  <a href="#" class="btn btn-sm btn-outline-primary" data-modal-fetch="/backdata/leads/day-preview?date=<?= urlencode($d['d']) ?>&limit=<?= $curLimit ?>&status=<?= urlencode($status) ?>&assigned=<?= urlencode($assigned) ?>" data-modal-title="Leads del <?= htmlspecialchars($d['d']) ?>">Abrir información</a>
       </div>
     </div>
     

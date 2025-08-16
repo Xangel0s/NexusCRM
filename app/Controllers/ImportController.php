@@ -10,7 +10,16 @@ class ImportController{
 
   public function importForm(){ $this->requireBD(); view('backdata/import_form'); }
 
-  public function importParse(){ $this->requireBD(); csrf_check();
+  public function importParse(){
+    $this->requireBD();
+    // If called via GET (e.g. pagination links accidentally point here), redirect to preview
+    if ($_SERVER['REQUEST_METHOD'] === 'GET'){
+      $qs = $_SERVER['QUERY_STRING'] ?? '';
+      $loc = '/backdata/import/preview' . ($qs ? '?'.$qs : '');
+      header('Location: ' . $loc);
+      exit;
+    }
+    csrf_check();
     if(empty($_FILES['csv']['tmp_name'])){ flash('error','Sube un archivo CSV'); header('Location: /backdata/import'); return; }
     $baseName = trim($_POST['base_name'] ?? ''); if($baseName===''){ flash('error','Ingresa el nombre de la Base'); header('Location: /backdata/import'); return; }
     $tags = trim($_POST['tags'] ?? '');
@@ -99,4 +108,57 @@ class ImportController{
     flash('success', 'Importados: '.$inserted);
     header('Location: /backdata/bases');
   }
+
+  // Remove selected rows from the staged import (session)
+  public function importRemoveSelected(){ $this->requireBD(); csrf_check();
+    $selected = array_filter(array_map('intval', $_POST['selected_indices'] ?? []));
+  if(empty($selected)){ flash('error','No hay filas seleccionadas'); header('Location: /backdata/import/preview'); return; }
+    $rows = $_SESSION['import_rows'] ?? [];
+  if(!$rows){ flash('error','No hay datos en staging'); header('Location: /backdata/import/preview'); return; }
+    // Remove by offset indices safely
+    $new = [];
+    foreach($rows as $i => $r){ if(!in_array($i, $selected, true)) $new[] = $r; }
+  $_SESSION['import_rows'] = $new;
+  flash('success','Filas eliminadas: '.count($selected));
+  $limit = (int)($_POST['limit'] ?? 50); $limit = in_array($limit,[20,50,100,500])?$limit:50;
+  $page = max(1, (int)($_POST['page'] ?? 1));
+  header('Location: /backdata/import/preview?limit='.$limit.'&page='.$page);
+  }
+
+    // GET handler to show the import preview (paginated view of staged rows)
+    public function importPreview(){
+      $this->requireBD();
+      $rows = $_SESSION['import_rows'] ?? [];
+      $baseName = $_SESSION['import_base_name'] ?? '';
+      $tags = $_SESSION['import_tags'] ?? '';
+      $allowDuplicates = false; // can't reliably know; default false
+      $counts = [
+        'total'=>count($rows),
+        'pending'=>count(array_filter($rows, fn($r)=>($r['status']??'')==='pending')),
+        'duplicates'=>count(array_filter($rows, fn($r)=>($r['status']??'')==='duplicate')),
+        'invalid'=>count(array_filter($rows, fn($r)=>($r['status']??'')==='invalid')),
+      ];
+
+      // normalize limit/page from GET, clamp and redirect if out of range
+      $limit = (int)($_GET['limit'] ?? 50); $limit = in_array($limit, [20,50,100,500]) ? $limit : 50;
+      $page = max(1, (int)($_GET['page'] ?? 1));
+      $total = count($rows);
+      $pages = $total > 0 ? max(1, (int)ceil($total / $limit)) : 1;
+      if ($page > $pages) {
+        // redirect to last valid page
+        header('Location: /backdata/import/preview?limit='.$limit.'&page='.$pages);
+        exit;
+      }
+
+      view('backdata/import_preview', [
+        'rows'=>$rows,
+        'base_name'=>$baseName,
+        'tags'=>$tags,
+        'allow_duplicates'=>$allowDuplicates,
+        'counts'=>$counts,
+        'csrf'=>csrf_token(),
+        'limit'=>$limit,
+        'page'=>$page,
+      ]);
+    }
 }

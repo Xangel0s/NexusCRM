@@ -224,7 +224,8 @@ class BackdataController{
   public function leadsDayPreview(){ $this->requireBD();
     $db = db();
     $date = $_GET['date'] ?? date('Y-m-d');
-    $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
+  $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100,500])?$limit:20;
+  $page = max(1, (int)($_GET['page'] ?? 1));
     $status = trim($_GET['status'] ?? '');
     $assigned = $_GET['assigned'] ?? '';
     // Support multiple batch ids (array or comma-separated)
@@ -270,6 +271,12 @@ class BackdataController{
     $params = array_merge($params, $statusList);
   }
 
+  // Count total for pagination
+  $countSql = "SELECT COUNT(*) FROM leads l WHERE $where";
+  $countStmt = $db->prepare($countSql); $countStmt->execute($params); $totalRows = (int)$countStmt->fetchColumn();
+
+  $offset = ($page-1)*$limit;
+
   $sql = "SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at,
       (SELECT b.name FROM import_batches b WHERE b.id=l.batch_id) AS base_name,
       (SELECT u2.name FROM lead_assignments la2 JOIN users u2 ON u2.id=la2.seller_id WHERE la2.lead_id=l.id ORDER BY la2.id DESC LIMIT 1) AS assigned_to,
@@ -277,9 +284,9 @@ class BackdataController{
       (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
       (SELECT u.name FROM lead_activities a JOIN users u ON u.id=a.user_id WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status_by,
       (SELECT a.note FROM lead_activities a WHERE a.lead_id=l.id AND a.note IS NOT NULL AND a.note<>'' ORDER BY a.id DESC LIMIT 1) AS last_note
-      FROM leads l WHERE $where ORDER BY l.id DESC LIMIT $limit";
+    FROM leads l WHERE $where ORDER BY l.id DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
   $stmt = $db->prepare($sql); $stmt->execute($params); $rows = $stmt->fetchAll();
-  view('backdata/leads_day_preview', ['leads'=>$rows,'limit'=>$limit,'date'=>$date,'batchIds'=>$batchIds,'statusList'=>$statusList]);
+  view('backdata/leads_day_preview', ['leads'=>$rows,'limit'=>$limit,'date'=>$date,'batchIds'=>$batchIds,'statusList'=>$statusList,'page'=>$page,'totalRows'=>$totalRows]);
   }
 
   // Lista de bases (función separada) — envolver el siguiente bloque en su propio método
@@ -336,10 +343,13 @@ class BackdataController{
     $db = db();
     $base = $db->prepare('SELECT b.*, u.name created_by_name FROM import_batches b JOIN users u ON u.id=b.created_by WHERE b.id=?');
     $base->execute([$id]); $batch = $base->fetch(); if(!$batch){ http_response_code(404); exit('Base no encontrada'); }
-    $q = trim($_GET['q'] ?? '');
-    $assigned = $_GET['assigned'] ?? '';
+  $q = trim($_GET['q'] ?? '');
+  $assigned = $_GET['assigned'] ?? '';
   $typed = $_GET['typed'] ?? '';
   $statusFilter = trim($_GET['status'] ?? '');
+  // Pagination
+  $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit, [20,50,100,500]) ? $limit : 20;
+  $page = (int)($_GET['page'] ?? 1); $page = max(1, $page);
     $where = 'l.batch_id=?'; $params = [$id];
   if($q!==''){ $where .= ' AND (l.phone LIKE ? OR l.full_name LIKE ? OR l.email LIKE ?)'; array_push($params,'%'.$q.'%','%'.$q.'%','%'.$q.'%'); }
     if($assigned==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_assignments la WHERE la.lead_id=l.id)'; }
@@ -347,16 +357,24 @@ class BackdataController{
   if($typed==='1'){ $where .= ' AND EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
   if($typed==='0'){ $where .= ' AND NOT EXISTS(SELECT 1 FROM lead_activities a WHERE a.lead_id=l.id)'; }
   if($statusFilter!==''){ $where .= ' AND (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1)=?'; $params[]=$statusFilter; }
-    $sql = "SELECT l.*,
+  // Count total for pagination
+  $countSql = "SELECT COUNT(*) FROM leads l WHERE $where";
+  $countStmt = $db->prepare($countSql); $countStmt->execute($params); $totalRows = (int)$countStmt->fetchColumn();
+
+  $offset = ($page-1)*$limit;
+
+  $sql = "SELECT l.*,
               (SELECT la.seller_id FROM lead_assignments la WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_id,
               (SELECT u.name FROM lead_assignments la JOIN users u ON u.id=la.seller_id WHERE la.lead_id=l.id ORDER BY la.id DESC LIMIT 1) AS seller_name,
               (SELECT a.status FROM lead_activities a WHERE a.lead_id=l.id ORDER BY a.id DESC LIMIT 1) AS last_status,
               (SELECT a2.created_at FROM lead_activities a2 WHERE a2.lead_id=l.id ORDER BY a2.id DESC LIMIT 1) AS last_status_at,
               (SELECT u2.name FROM lead_activities a3 JOIN users u2 ON u2.id=a3.user_id WHERE a3.lead_id=l.id ORDER BY a3.id DESC LIMIT 1) AS last_status_by,
               (SELECT a4.note FROM lead_activities a4 WHERE a4.lead_id=l.id AND a4.note IS NOT NULL AND a4.note<>'' ORDER BY a4.id DESC LIMIT 1) AS last_note
-            FROM leads l WHERE $where ORDER BY l.id DESC LIMIT 500";
+            FROM leads l WHERE $where ORDER BY l.id DESC";
+  // Append limit/offset directly (safe because ints)
+  $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
   $stmt = $db->prepare($sql); $stmt->execute($params); $leads = $stmt->fetchAll();
-  view('backdata/base_detail', ['batch'=>$batch,'leads'=>$leads,'q'=>$q,'assigned'=>$assigned,'typed'=>$typed,'statusFilter'=>$statusFilter]);
+  view('backdata/base_detail', ['batch'=>$batch,'leads'=>$leads,'q'=>$q,'assigned'=>$assigned,'typed'=>$typed,'statusFilter'=>$statusFilter,'limit'=>$limit,'page'=>$page,'totalRows'=>$totalRows]);
   }
 
   public function baseArchive(){ $this->requireBD(); csrf_check(); $id=(int)($_POST['id']??0); if(!$id){ header('Location: /backdata/bases'); return; }
@@ -471,13 +489,17 @@ class BackdataController{
   }
 
   public function assignPreview(){ $this->requireBD();
-    $batchId = (int)($_GET['batch_id'] ?? 0); $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100])?$limit:20;
+    $batchId = (int)($_GET['batch_id'] ?? 0); $limit = (int)($_GET['limit'] ?? 20); $limit = in_array($limit,[20,50,100,500])?$limit:20;
+    $page = max(1, (int)($_GET['page'] ?? 1));
     if(!$batchId){ http_response_code(400); exit('Falta batch_id'); }
   $db = db();
-  $stmt = $db->prepare("SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at FROM leads l LEFT JOIN lead_assignments la ON la.lead_id=l.id WHERE la.lead_id IS NULL AND l.batch_id=? ORDER BY l.id DESC LIMIT $limit");
+  // total count
+  $c = $db->prepare('SELECT COUNT(*) FROM leads l LEFT JOIN lead_assignments la ON la.lead_id=l.id WHERE la.lead_id IS NULL AND l.batch_id=?'); $c->execute([$batchId]); $total = (int)$c->fetchColumn();
+  $offset = ($page-1)*$limit;
+  $stmt = $db->prepare("SELECT l.id,l.full_name,l.phone,l.email,l.source_name,l.created_at FROM leads l LEFT JOIN lead_assignments la ON la.lead_id=l.id WHERE la.lead_id IS NULL AND l.batch_id=? ORDER BY l.id DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset);
   $stmt->execute([$batchId]);
   $rows = $stmt->fetchAll();
-  view('backdata/assign_preview', ['leads'=>$rows,'limit'=>$limit,'batch_id'=>$batchId]);
+  view('backdata/assign_preview', ['leads'=>$rows,'limit'=>$limit,'batch_id'=>$batchId,'page'=>$page,'total'=>$total]);
   }
 
   public function assignRun(){ $this->requireBD(); csrf_check();
